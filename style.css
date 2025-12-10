@@ -1,0 +1,624 @@
+/* [BHH: STYLES START] */
+:root {
+  --bg: #0b1a0f;        /* deep forest */
+  --panel: #101f14;     /* card */
+  --muted: #1a2b1f;
+  --accent: #6dbc5d;    /* green */
+  --text: #e7f1e8;
+  --subtle: #a3b7a6;
+  --danger: #f87171;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --logo-size: 128px;   /* desktop/tablet logo height */
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, Roboto, Arial, sans-serif;
+}
+
+/* Full screen map */
+#map {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+}
+
+#map.placing {
+  cursor: crosshair;
+}
+
+/* Info panel (smaller + draggable) */
+.panel {
+  position: fixed;
+  left: 12px;
+  top: 80px;
+  z-index: 1000;
+  background: var(--panel);
+  border: 1px solid #203325;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px 10px;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.panel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: move;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #1d3323;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--subtle);
+}
+
+/* Bottom main menu (desktop defaults) */
+.main-menu {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  display: flex;
+  gap: 8px;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 12px calc(10px + var(--safe-bottom));
+  background: linear-gradient(
+    180deg,
+    rgba(11, 26, 15, 0.1),
+    rgba(11, 26, 15, 0.85)
+  );
+  backdrop-filter: blur(8px);
+  border-top: 1px solid #203325;
+  flex-wrap: nowrap;
+}
+
+.main-menu button {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  padding: 8px 6px;
+  border: 1px solid #f97316;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+  border-radius: 12px;
+  background: #14271a;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  overflow: visible;
+}
+
+.wind-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 260px;
+}
+
+#windText {
+  font-size: 10px;
+}
+
+
+/* Sheets (backdrop + panel) */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1199;
+  display: none;
+}
+
+.backdrop.show {
+  display: block;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  background: var(--panel);
+  border-top: 1px solid #203325;
+  border-radius: 16px 16px 0 0;
+  box-shadow: var(--shadow);
+  transform: translateY(110%);
+  transition: transform 0.25s ease;
+}
+
+.sheet.show {
+  transform: translateY(0);
+}
+
+.sheet .grab {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: #2b4231;
+  margin: 8px auto;
+}
+
+/* Close (×) button for sheets */
+.sheet .close-x {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid #25432b;
+  background: #14271a;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 30px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.sheet .close-x:active {
+  transform: translateY(1px);
+}
+
+.sheet .option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid #1d3323;
+  cursor: pointer;
+}
+
+.sheet h4 {
+  margin: 6px 16px 8px;
+  font-size: 14px;
+  color: var(--subtle);
+}
+
+.sheet .content {
+  padding: 4px 16px 14px;
+}
+
+.sheet .row {
+  border: 0;
+}
+
+.sheet input[type="text"],
+.sheet input[type="number"],
+.sheet input[type="search"],
+.sheet select,
+.sheet textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #25432b;
+  background: #14271a;
+  color: var(--text);
+}
+
+.sheet textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.btn {
+  padding: 8px 12px;
+  border: 1px solid #25432b;
+  border-radius: 10px;
+  background: #14271a;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn.danger {
+  border-color: #5a2222;
+  background: #331616;
+}
+
+/* Segment / total distance labels */
+.seglabel {
+  background: rgba(16, 31, 20, 0.92);
+  border: 1px solid #203325;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* Hunt score list */
+.score-list {
+  max-height: 48vh;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.score-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #1d3323;
+}
+
+.bar {
+  height: 8px;
+  background: #1f3b29;
+  border: 1px solid #2a4a32;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: #6dbc5d;
+}
+
+/* County labels */
+.county-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: rgba(16, 31, 20, 0.75);
+  border: 1px solid #203325;
+  color: #e7f1e8;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* GPS shiny blue dot */
+.pulse-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid #1d4ed8;
+  box-shadow: 0 0 0 rgba(59, 130, 246, 0.5);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* --- Mobile tweaks --- */
+@media (max-width: 640px) {
+  :root {
+    --logo-size: 96px;
+  }
+
+  .panel {
+    left: 8px;
+    top: 72px;
+  }
+
+  .main-menu {
+    gap: 4px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    padding: 6px 6px calc(10px + var(--safe-bottom));
+  }
+
+  .main-menu button {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    padding: 4px 2px;
+    font-size: clamp(8px, 1.8vw, 11px);
+    white-space: nowrap;
+    overflow: visible;
+  }
+
+  .wind-btn {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  #windText {
+    font-size: clamp(8px, 1.6vw, 10px);
+  }
+}
+
+@supports (height: 100svh) {
+  #map {
+    height: 100svh;
+  }
+}
+
+/* Floating “BHH Map Layers” button (draggable) */
+#bhhLayersBtn {
+  position: fixed;
+  top: 10px;
+  left: 58px;
+  z-index: 1300;
+}
+
+#bhhLayersBtn button {
+  background: #14271a;
+  color: var(--text);
+  border: 1px solid #f97316;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow);
+  cursor: grab;
+  white-space: nowrap;
+}
+
+#bhhLayersBtn button:active {
+  cursor: grabbing;
+}
+
+/* Compass widget – show by default */
+#compassWidget {
+  position: fixed;
+  bottom: 90px;
+  right: 12px;
+  z-index: 1300;
+  display: block !important;  /* <- force it visible */
+}
+
+
+.compass-ring {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #243624 0, #101f14 55%, #070d09 100%);
+  border: 2px solid #3b4f3c;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.compass-ring:active {
+  cursor: grabbing;
+}
+
+/* N/E/S/W labels */
+.compass-label {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d7e6d8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  user-select: none;
+}
+
+.compass-label.n { top: 4px;    left: 50%; transform: translateX(-50%); }
+.compass-label.s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.compass-label.e { right: 4px;  top: 50%;  transform: translateY(-50%); }
+.compass-label.w { left: 4px;   top: 50%;  transform: translateY(-50%); }
+
+/* Needle */
+.compass-needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 22px solid #f97316;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(0deg);
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.8));
+}
+
+
+
+/* Waypoint pin icons */
+.wp-pin {
+  --wp-pin-icon: #f97316;
+
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.75));
+}
+
+.wp-pin .wp-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* For external SVG image icons (buck / doe) */
+.wp-pin img.wp-img-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.75));
+}
+
+
+/* Per-type color accents */
+.wp-pin.wp-blood  { --wp-pin-icon: #ef4444; }
+.wp-pin.wp-hazard { --wp-pin-icon: #f97316; }
+.wp-pin.wp-water  { --wp-pin-icon: #3b82f6; }
+.wp-pin.wp-camp,
+.wp-pin.wp-truck  { --wp-pin-icon: #e5e7eb; }
+.wp-pin.wp-buck,
+.wp-pin.wp-doe,
+.wp-pin.wp-stand,
+.wp-pin.wp-blind,
+.wp-pin.wp-scrape,
+.wp-pin.wp-rub,
+.wp-pin.wp-trail,
+.wp-pin.wp-camera,
+.wp-pin.wp-food   { --wp-pin-icon: #f97316; }
+
+/* Buck / Doe as solid orange silhouettes (no white box) */
+.wp-pin.wp-buck,
+.wp-pin.wp-doe {
+  background-color: var(--wp-pin-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Use your actual files & paths */
+.wp-pin.wp-buck {
+  -webkit-mask-image: url('Icons/bhh-buck.svg');
+  mask-image: url('Icons/bhh-buck.svg');
+}
+
+.wp-pin.wp-doe {
+  -webkit-mask-image: url('Icons/bhh-doe.svg');
+  mask-image: url('Icons/bhh-doe.svg');
+}
+
+
+/* Waypoints list */
+.wp-list {
+  max-height: 38vh;
+  overflow: auto;
+  margin-top: 6px;
+}
+
+/* One row: [icon] [name/meta] [buttons] */
+#wpList .item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #1d3323;
+}
+
+/* icon cell */
+#wpList .wp-item-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* shapes (lines / areas) */
+#wpList .shape-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+/* name + meta */
+#wpList .wp-item-main {
+  min-width: 0;
+}
+
+#wpList .wp-item-name {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #25432b;
+  background: #14271a;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  height: 32px;
+}
+
+#wpList .meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--subtle);
+}
+
+/* buttons */
+#wpList .wp-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#wpList .wp-item-actions .btn {
+  padding: 6px 8px;
+  min-width: 72px;
+  height: 32px;
+}
+
+/* Wider screens: actions in a horizontal row */
+@media (min-width: 640px) {
+  #wpList .item {
+    grid-template-columns: auto 1fr auto;
+  }
+  #wpList .wp-item-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+/* Make sure old generic .item styles don’t interfere */
+.sheet #wpList .item {
+  margin: 0;
+}
+
+.wp-type-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#wpTypePreview .wp-pin {
+  width: 32px;
+  height: 32px;
+}
+/* [BHH: STYLES END] */
