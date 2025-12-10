@@ -956,46 +956,122 @@ map.on('overlayremove', (e) => {
 
 
 /*******************
- * OVERLAYS: Waterfowl Zones (ODNR polygons)
+ * OVERLAYS: Waterfowl Zones (OH + IN)
  *******************/
 // [BHH: OVERLAYS – WATERFOWL ZONES START]
-const waterfowlZones = L.geoJSON(null, {
-  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
-  onEachFeature: (feat, layer) => {
-    const p = feat.properties || {};
-    const name = p.Zone_ || p.ZONE_NAME || 'Waterfowl Zone';
-    const duck = p.DuckSeason || p.DUCK_SEASON || '';
-    const goose = p.GooseSeason || p.GOOSE_SEASON || '';
 
-    const rows = [
-      duck ? `<div><span style="color:#a3b7a6">Duck:</span> ${duck}</div>` : '',
-      goose ? `<div><span style="color:#a3b7a6">Goose:</span> ${goose}</div>` : ''
-    ].join('');
+// One overlay toggle in the UI controls this group:
+const waterfowlZones = L.layerGroup();
 
-    layer.bindPopup(
-      `<b>${name}</b>${
+// --- Common styling / popup logic for all waterfowl features ---
+function decorateWaterfowlFeature(feat, layer) {
+  const p = feat.properties || {};
+
+  // Try a bunch of common field names to get a zone name
+  const name =
+    p.Zone_ ||
+    p.ZONE_NAME ||
+    p.ZoneName ||
+    p.ZONE ||
+    p.ZONE_LABEL ||
+    'Waterfowl Zone';
+
+  const duck =
+    p.DuckSeason || p.DUCK_SEASON || p.DUCK || p.DUCK_SEAS || '';
+  const goose =
+    p.GooseSeason || p.GOOSE_SEASON || p.GOOSE || p.GOOSE_SEAS || '';
+
+  const rows = [
+    duck
+      ? `<div><span style="color:#a3b7a6">Duck:</span> ${duck}</div>`
+      : '',
+    goose
+      ? `<div><span style="color:#a3b7a6">Goose:</span> ${goose}</div>`
+      : ''
+  ].join('');
+
+  layer.bindPopup(
+    `<b>${name}</b>${
       rows ? `<div style="margin-top:6px">${rows}</div>` : ''
-      }`
-    );
+    }`
+  );
 
-    layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
-    layer.on('mouseout', () => layer.setStyle({ weight: 2 }));
-  }
+  layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+  layer.on('mouseout', () => layer.setStyle({ weight: 2 }));
+}
+
+// Ohio waterfowl polygons (same ODNR service you already had)
+const ohioWaterfowlZones = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: decorateWaterfowlFeature
 });
 
-async function loadWaterfowlZones() {
+// Indiana waterfowl polygons (from IN DNR service)
+const indianaWaterfowlZones = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: decorateWaterfowlFeature
+});
+
+// Add both to the overlay group; the checkbox just toggles this group
+ohioWaterfowlZones.addTo(waterfowlZones);
+indianaWaterfowlZones.addTo(waterfowlZones);
+
+// ---- Data loaders ----
+
+// OHIO: ODNR Hunting Regulations service
+async function loadOhioWaterfowlZones() {
   try {
     const url =
-      'https://gis2.ohiodnr.gov/ArcGIS/rest/services/DOW_Services/Hunting_Regulations/MapServer/2/query?where=1%3D1&outFields=*&outSR=4326&f=geojson';
-    const r = await fetch(url);
+      'https://gis2.ohiodnr.gov/ArcGIS/rest/services/DOW_Services/Hunting_Regulations/MapServer/2/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
-    waterfowlZones.addData(j);
+    ohioWaterfowlZones.addData(j);
   } catch (e) {
-    console.warn('Waterfowl zones load failed', e);
+    console.warn('Ohio waterfowl zones load failed', e);
   }
+}
+
+// INDIANA: you must paste the REST service URL for the
+// “Hunting Areas Waterfowl Zones” layer from your Experience map.
+// It will look something like:
+//   https://.../arcgis/rest/services/.../FeatureServer/0
+//
+// 1. Open that layer in ArcGIS (from the Experience: ... > More details).
+// 2. Copy the layer’s REST URL.
+// 3. Replace the placeholder string below with that URL.
+const IN_WATERFOWL_SERVICE = 'https://experience.arcgis.com/experience/88e4745e813c4d3b9fb7e50084280f4e';
+
+async function loadIndianaWaterfowlZones() {
+  if (!IN_WATERFOWL_SERVICE ||
+      IN_WATERFOWL_SERVICE.includes('https://experience.arcgis.com/experience/88e4745e813c4d3b9fb7e50084280f4e')) {
+    console.warn('Indiana waterfowl service URL not configured yet.');
+    return;
+  }
+
+  try {
+    const url =
+      IN_WATERFOWL_SERVICE +
+      '/query?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    indianaWaterfowlZones.addData(j);
+  } catch (e) {
+    console.warn('Indiana waterfowl zones load failed', e);
+  }
+}
+
+// Kick off both loads (they run in the background)
+function loadWaterfowlZones() {
+  loadOhioWaterfowlZones();
+  loadIndianaWaterfowlZones();
 }
 loadWaterfowlZones();
 // [BHH: OVERLAYS – WATERFOWL ZONES END]
+
 
 
 /*******************
@@ -2629,12 +2705,17 @@ function onStateChanged() {
       'Public Hunting (coming soon)';
   }
 
-  if (lblWaterfowl) {
+    if (lblWaterfowl)
     lblWaterfowl.textContent =
-      isOH
-        ? 'Waterfowl Zones'
-        : 'Waterfowl Zones (OH only for now)';
-  }
+      (currentState === 'IN')
+        ? 'Indiana Waterfowl Zones'
+        : 'Ohio Waterfowl Zones';
+
+  const isOH = currentState === 'OH';
+  ovlOhio.disabled = !isOH;    // Ohio public lands still OH-only
+  ovlWaterfowl.disabled = false; // Waterfowl overlay works for both states now
+  ovlCounties.disabled = false;
+
 
   // Enable Public + Counties for OH/IN, disable elsewhere
   if (ovlOhio)      ovlOhio.disabled     = !(isOH || isIN);
