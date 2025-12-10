@@ -924,21 +924,39 @@ const ovlTrack = document.getElementById('ovlTrack');
 
 // These layers get toggled by the sheet
 function syncOverlayChecks() {
-  ovlOhio.checked = map.hasLayer(ohioPublic);
-  ovlCounties.checked =
-    (currentState === 'IN')
-      ? map.hasLayer(indianaCounties)
-      : map.hasLayer(ohioCounties);
+  if (!ovlOhio || !ovlCounties || !ovlWaterfowl || !ovlDraw || !ovlMarks || !ovlTrack) return;
+
+  if (currentState === 'IN') {
+    ovlOhio.checked     = map.hasLayer(indianaPublic);
+    ovlCounties.checked = map.hasLayer(indianaCounties);
+  } else {
+    ovlOhio.checked     = map.hasLayer(ohioPublic);
+    ovlCounties.checked = map.hasLayer(ohioCounties);
+  }
+
   ovlWaterfowl.checked = map.hasLayer(waterfowlZones);
-  ovlDraw.checked = map.hasLayer(drawnItems);
-  ovlMarks.checked = map.hasLayer(markersLayer);
-  ovlTrack.checked = map.hasLayer(trackLayer);
+  ovlDraw.checked      = map.hasLayer(drawnItems);
+  ovlMarks.checked     = map.hasLayer(markersLayer);
+  ovlTrack.checked     = map.hasLayer(trackLayer);
 }
 
-ovlOhio.onchange =
-  () => ovlOhio.checked
-    ? ohioPublic.addTo(map)
-    : map.removeLayer(ohioPublic);
+
+ovlOhio.onchange = () => {
+  if (currentState === 'IN') {
+    if (ovlOhio.checked) {
+      indianaPublic.addTo(map);
+    } else {
+      map.removeLayer(indianaPublic);
+    }
+  } else {
+    if (ovlOhio.checked) {
+      ohioPublic.addTo(map);
+    } else {
+      map.removeLayer(ohioPublic);
+    }
+  }
+};
+
 
 ovlCounties.onchange = () => {
   if (currentState === 'IN') {
@@ -2482,52 +2500,69 @@ function syncStateUI() {
 }
 
 function onStateChanged() {
-  const wantedCounties =
-    ovlCounties && (
-      ovlCounties.checked ||
-      map.hasLayer(ohioCounties) ||
-      map.hasLayer(indianaCounties)
-    );
+  const wantedPublic   = ovlOhio     && ovlOhio.checked;
+  const wantedCounties = ovlCounties && ovlCounties.checked;
 
   const cfg = STATE_CFG[currentState];
   if (cfg) map.setView(cfg.center, cfg.zoom);
 
-  const lblPublic = document.getElementById('lblPublic');
-  const lblCounties = document.getElementById('lblCounties');
+  const lblPublic    = document.getElementById('lblPublic');
+  const lblCounties  = document.getElementById('lblCounties');
   const lblWaterfowl = document.getElementById('lblWaterfowl');
 
-  if (lblCounties)
-    lblCounties.textContent =
-      (currentState === 'IN') ? 'Indiana Counties' : 'Ohio Counties';
-
-  if (lblPublic)
-    lblPublic.textContent =
-      (currentState === 'IN')
-        ? 'Indiana Public Hunting (coming soon)'
-        : 'Ohio Public Hunting';
-
-  if (lblWaterfowl)
-    lblWaterfowl.textContent =
-      (currentState === 'IN')
-        ? 'Waterfowl Zones (coming soon)'
-        : 'Waterfowl Zones';
-
   const isOH = currentState === 'OH';
-  ovlOhio.disabled = !isOH;
-  ovlWaterfowl.disabled = !isOH;
-  ovlCounties.disabled = false;
+  const isIN = currentState === 'IN';
 
-  if (map.hasLayer(ohioCounties)) map.removeLayer(ohioCounties);
-  if (map.hasLayer(countyLabels)) map.removeLayer(countyLabels);
-  if (map.hasLayer(indianaCounties)) map.removeLayer(indianaCounties);
+  if (lblCounties) {
+    lblCounties.textContent =
+      isIN ? 'Indiana Counties' :
+      isOH ? 'Ohio Counties' :
+      'State Counties (coming soon)';
+  }
+
+  if (lblPublic) {
+    lblPublic.textContent =
+      isIN ? 'Indiana Public Hunting' :
+      isOH ? 'Ohio Public Hunting' :
+      'Public Hunting (coming soon)';
+  }
+
+  if (lblWaterfowl) {
+    lblWaterfowl.textContent =
+      isOH
+        ? 'Waterfowl Zones'
+        : 'Waterfowl Zones (OH only for now)';
+  }
+
+  // Enable Public + Counties for OH/IN, disable elsewhere
+  if (ovlOhio)      ovlOhio.disabled     = !(isOH || isIN);
+  if (ovlCounties)  ovlCounties.disabled = !(isOH || isIN);
+  if (ovlWaterfowl) ovlWaterfowl.disabled = !isOH;
+
+  // Remove all state-specific overlays
+  if (map.hasLayer(ohioPublic))    map.removeLayer(ohioPublic);
+  if (map.hasLayer(indianaPublic)) map.removeLayer(indianaPublic);
+
+  if (map.hasLayer(ohioCounties))        map.removeLayer(ohioCounties);
+  if (map.hasLayer(countyLabels))        map.removeLayer(countyLabels);
+  if (map.hasLayer(indianaCounties))     map.removeLayer(indianaCounties);
   if (map.hasLayer(indianaCountyLabels)) map.removeLayer(indianaCountyLabels);
 
-  if (wantedCounties) {
-    if (currentState === 'IN') {
+  // Re-add for the new state based on current checkboxes
+  if (wantedPublic && ovlOhio && !ovlOhio.disabled) {
+    if (isIN) {
+      indianaPublic.addTo(map);
+    } else if (isOH) {
+      ohioPublic.addTo(map);
+    }
+  }
+
+  if (wantedCounties && ovlCounties && !ovlCounties.disabled) {
+    if (isIN) {
       indianaCounties.addTo(map);
       indianaCountyLabels.addTo(map);
       refreshIndianaCountyLabels();
-    } else {
+    } else if (isOH) {
       ohioCounties.addTo(map);
       countyLabels.addTo(map);
       refreshCountyLabels();
@@ -2536,6 +2571,7 @@ function onStateChanged() {
 
   syncOverlayChecks();
 }
+
 
 function setState(code, save = true) {
   const c = (code || 'OH').toUpperCase();
