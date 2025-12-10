@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- [BHH: HEAD START] -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1a0f" />
+  <title>Buckeye Hunter Hub — Mobile Hunting Map</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="Icons/bhh-logo-180.png">
+  <meta name="theme-color" content="#0b1a0f">
+
+  <!-- Leaflet core -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet.draw -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- SunCalc for sun/moon -->
+  <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+
+  <!-- BHH main styles -->
+  <link rel="stylesheet" href="style.css?v=3" />
+  <!-- [BHH: HEAD END] -->
+</head>
+<body>
+  <!-- [BHH: BODY START] -->
+  <div id="app">
+    <div id="map"></div>
+
+    <!-- Floating BHH Map Layers button -->
+    <div id="bhhLayersBtn" aria-label="BHH Map Layers">
+      <button id="bhhLayersBtnHandle" type="button">BHH Map Layers</button>
+    </div>
+    
+    <!-- [BHH: UI – STATE BADGE START] -->
+    <div
+      id="stateBadge"
+      aria-live="polite"
+      style="
+        position: fixed;
+        left: 12px;
+        top: 120px;
+        z-index: 1300;
+        background: #14271a;
+        border: 1px solid #f97316;
+        border-radius: 10px;
+        padding: 6px 10px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        font-size: 13px;
+        color: #e7f1e8;
+        cursor: grab;
+      "
+    >
+      State: <strong id="stateBadgeText">--</strong>
+    </div>
+    <!-- [BHH: UI – STATE BADGE END] -->
+
+    <!-- Compass overlay (draggable) -->
+    <div id="compassWidget">
+      <div id="compassWidgetHandle" class="compass-ring">
+        <div class="compass-label n">N</div>
+        <div class="compass-label e">E</div>
+        <div class="compass-label s">S</div>
+        <div class="compass-label w">W</div>
+        <div id="compassNeedle" class="compass-needle"></div>
+      </div>
+    </div>
+
+    <!-- Field Info panel (hidden by default; draggable) -->
+    <section class="panel" id="infoPanel" style="display: none;">
+      <h3 id="infoHandle">📋 Field Info</h3>
+      <div class="row">
+        <span>Sunrise</span><strong id="pSunrise" class="tag">--:--</strong>
+      </div>
+      <div class="row">
+        <span>Sunset</span><strong id="pSunset" class="tag">--:--</strong>
+      </div>
+      <div class="row">
+        <span>Day Length</span><strong id="pDay" class="tag">--h --m</strong>
+      </div>
+      <div class="row">
+        <span>Track Distance</span
+        ><strong id="pTrkDist" class="tag">0 m</strong>
+      </div>
+      <div class="row">
+        <span>Track Duration</span
+        ><strong id="pTrkDur" class="tag">0:00</strong>
+      </div>
+      <p class="tag">
+        Tip: start the Track Recorder to populate distance &amp; duration.
+      </p>
+    </section>
+
+    <!-- Bottom main menu -->
+    <nav class="main-menu" id="mainMenu">
+      <button id="menuWind" class="wind-btn">
+        <span id="windText">Wind: --</span>
+      </button>
+      <button id="menuAlmanac">Almanac</button>
+      <button id="menuTools">Tools</button>
+      <button id="menuShop">Shop Gear</button>
+      <button id="menuLocate">Locate Me</button>
+
+      <!-- Hidden file input for imports -->
+      <input
+        type="file"
+        id="fileImport"
+        accept=".json,.geojson,.kml,.gpx,application/json,application/geo+json,application/vnd.google-earth.kml+xml,application/gpx+xml,text/xml,application/xml"
+        style="display: none;"
+      />
+    </nav>
+
+    <!-- Shared backdrop for sheets -->
+    <div class="backdrop" id="sheetBackdrop"></div>
+
+    <!-- Basemap & Overlays sheet -->
+    <div class="sheet" id="basemapSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Basemap</h4>
+      <div class="option">
+        <span>Basic</span><input type="radio" name="basemap" value="basic" />
+      </div>
+      <div class="option">
+        <span>Satellite</span><input type="radio" name="basemap" value="satellite" />
+      </div>
+      <div class="option">
+        <span>Topographic</span><input type="radio" name="basemap" value="topo" />
+      </div>
+      <div class="option">
+        <span>Hybrid</span><input type="radio" name="basemap" value="hybrid" />
+      </div>
+
+      <h4 style="margin-top: 10px;">State</h4>
+      <div class="option" style="gap: 10px;">
+        <span>Select state</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="stateSelect">
+            <option value="OH">Ohio</option>
+            <option value="MI">Michigan</option>
+            <option value="PA">Pennsylvania</option>
+            <option value="IN">Indiana</option>
+            <option value="KY">Kentucky</option>
+            <option value="WV">West Virginia</option>
+          </select>
+          <button class="btn" id="stateApply" type="button">Set</button>
+        </div>
+      </div>
+      <p class="tag" style="margin: 6px 16px 0;">
+        This just saves your state preference for future loaders.
+      </p>
+
+      <h4 style="margin-top: 10px;">Overlays</h4>
+      <div class="option">
+        <span id="lblPublic">Ohio Public Hunting</span
+        ><input id="ovlOhio" type="checkbox" />
+      </div>
+      <div class="option">
+        <span id="lblCounties">Ohio Counties</span
+        ><input id="ovlCounties" type="checkbox" />
+      </div>
+      <div class="option">
+        <span id="lblWaterfowl">Waterfowl Zones</span
+        ><input id="ovlWaterfowl" type="checkbox" />
+      </div>
+      <div class="option">
+        <span>My Drawings</span><input id="ovlDraw" type="checkbox" />
+      </div>
+      <div class="option">
+        <span>Hunt Markers</span><input id="ovlMarks" type="checkbox" />
+      </div>
+      <div class="option">
+        <span>My Track</span><input id="ovlTrack" type="checkbox" />
+      </div>
+    </div>
+
+    <!-- Tools sheet -->
+    <div class="sheet" id="toolsSheet" aria-hidden="true">
+      <div class="grab"></div>
+
+      <h4>Drawing</h4>
+      <div class="row" style="gap:6px; flex-wrap:wrap;">
+        <button class="btn" id="drawLineBtn">Line</button>
+        <button class="btn" id="drawPolygonBtn">Area</button>
+        <button class="btn" id="drawRectBtn">Rectangle</button>
+        <button class="btn" id="drawCircleBtn">Circle</button>
+      </div>
+      <p class="tag" style="margin-top:4px;">
+        Tap a shape type, the sheet closes, then tap/drag on the map to draw. Shapes save automatically.
+      </p>
+      
+      <h4>Tools</h4>
+
+      <div class="option" id="toolWaypoints">
+        <span>Waypoints</span>
+        <button class="btn">Open</button>
+      </div>
+
+      <div class="option" id="toolTrack">
+        <span>Track</span>
+        <button class="btn">Open</button>
+      </div>
+
+      <div class="option" id="toolCompass">
+        <span>Compass</span>
+        <button class="btn">Open</button>
+      </div>
+
+      <div class="option" id="toolState">
+        <span>Change State</span>
+        <button class="btn" id="menuState">Open</button>
+      </div>
+
+      <div class="option" id="toolExport">
+        <span>Export data</span>
+        <button class="btn" id="btnExport">Export</button>
+      </div>
+
+      <div class="option" id="toolImport">
+        <span>Import data</span>
+        <button class="btn" id="btnImport">Import</button>
+      </div>
+
+      <div class="option">
+        <span>Delete mode</span>
+        <input id="toolDeleteToggle" type="checkbox" />
+      </div>
+
+      <p class="tag">
+        Tip: “Delete mode” lets you tap items on the map (markers & shapes) to remove them.
+      </p>
+    </div>
+
+    <!-- Waypoints + Shapes manager sheet -->
+    <div class="sheet" id="waypointsSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Waypoints &amp; Shapes</h4>
+      <div class="content">
+        <div class="wp-type-row" style="margin-bottom:8px;">
+          <select id="wpType"></select>
+          <div id="wpTypePreview"></div>
+        </div>
+
+        <input id="wpName" type="text" placeholder="Name (optional)" style="margin-bottom:8px;" />
+
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button class="btn" id="wpAddCenter">Add at Map Center</button>
+          <button class="btn" id="wpAddGPS">Add from Camera/GPS</button>
+        </div>
+        <input
+          id="wpSearch"
+          type="search"
+          placeholder="Search by name or type"
+        />
+        <div class="wp-list" id="wpList"></div>
+      </div>
+    </div>
+
+    <!-- Waypoint details (notes + photo) -->
+    <div class="sheet" id="wpDetailSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Waypoint Details</h4>
+      <div class="content">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+          "
+        >
+          <input id="wpDetName" type="text" placeholder="Name" />
+          <select id="wpDetType"></select>
+        </div>
+        <textarea
+          id="wpDetNotes"
+          placeholder="Notes (sign, access, direction, pressure, etc.)"
+        ></textarea>
+        <div
+          style="
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          "
+        >
+          <button class="btn" id="wpPickPhoto">Add/Replace Photo</button>
+          <input
+            type="file"
+            id="wpPhotoInput"
+            accept="image/*;capture=camera"
+            style="display: none;"
+          />
+          <span class="tag" id="wpPhotoInfo">No photo</span>
+        </div>
+        <div id="wpPhotoPreview" style="margin-top: 10px;"></div>
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            justify-content: flex-end;
+          "
+        >
+          <button class="btn" id="wpDetSave">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track recorder sheet -->
+    <div class="sheet" id="trackSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Track Recorder</h4>
+      <div class="content">
+        <div class="row">
+          <span>Status</span><strong id="trkStatus" class="tag">Stopped</strong>
+        </div>
+        <div class="row">
+          <span>Points</span><strong id="trkPts" class="tag">0</strong>
+        </div>
+        <div class="row">
+          <span>Distance</span><strong id="trkDist" class="tag">0 m</strong>
+        </div>
+        <div class="row">
+          <span>Duration</span><strong id="trkDur" class="tag">0:00</strong>
+        </div>
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+          "
+          ><input type="checkbox" id="trkFollow" /> Auto-center while
+          recording</label
+        >
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn" id="trkStartStop">Start</button>
+          <button class="btn danger" id="trkClear">Clear Track</button>
+          <button class="btn" id="trkExport">Export GPX</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wind & Scent cone sheet -->
+    <div class="sheet" id="windSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Wind &amp; Scent Cone</h4>
+      <div class="content">
+        <div class="row">
+          <span>Wind</span
+          ><button class="btn" id="windRefresh">Refresh now</button>
+        </div>
+        <div class="option">
+          <span>Show scent cone</span
+          ><input id="coneToggle" type="checkbox" />
+        </div>
+        <div class="option">
+          <span>Width</span
+          ><input
+            id="coneWidth"
+            type="range"
+            min="20"
+            max="120"
+            step="5"
+            value="60"
+            style="width: 160px;"
+          />
+        </div>
+        <div class="option">
+          <span>Length scale</span
+          ><input
+            id="coneScale"
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value="1"
+            style="width: 160px;"
+          />
+        </div>
+        <div class="option">
+          <span>Anchor</span>
+          <div>
+            <label style="margin-right: 10px;"
+              ><input
+                type="radio"
+                name="coneAnchor"
+                value="gps"
+                checked
+              />
+              GPS</label
+            >
+            <label
+              ><input type="radio" name="coneAnchor" value="center" />
+              Map center</label
+            >
+          </div>
+        </div>
+        <p class="tag">
+          Length scales with wind speed. Width spreads the cone. Anchor sets the
+          origin.
+        </p>
+      </div>
+    </div>
+
+    <!-- Almanac sheet -->
+    <div class="sheet" id="almanacSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Almanac</h4>
+      <div class="content">
+        <div class="option" id="almOpenScore">
+          <span>Hunt Score</span>
+          <button class="btn">Open</button>
+        </div>
+        <div class="option" id="almOpenMoon">
+          <span>Moon Phases</span>
+          <button class="btn">Open</button>
+        </div>
+        <div class="option">
+          <span>Show Field Info panel</span
+          ><input id="almanacFieldInfo" type="checkbox" />
+        </div>
+        <div
+          style="display: flex; justify-content: flex-end; padding: 12px 16px;"
+        >
+          <button class="btn" id="almanacClose">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State selector sheet -->
+    <div class="sheet" id="stateSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Select State</h4>
+
+      <div class="option">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="OH" />
+          <span>Ohio (OH)</span>
+        </label>
+      </div>
+
+      <div class="option">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="IN" />
+          <span>Indiana (IN)</span>
+        </label>
+      </div>
+
+      <div class="option" style="opacity: 0.6; cursor: not-allowed;">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="MI" disabled />
+          <span>Michigan (MI) — coming soon</span>
+        </label>
+      </div>
+      <div class="option" style="opacity: 0.6; cursor: not-allowed;">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="PA" disabled />
+          <span>Pennsylvania (PA) — coming soon</span>
+        </label>
+      </div>
+      <div class="option" style="opacity: 0.6; cursor: not-allowed;">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="KY" disabled />
+          <span>Kentucky (KY) — coming soon</span>
+        </label>
+      </div>
+      <div class="option" style="opacity: 0.6; cursor: not-allowed;">
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+          "
+        >
+          <input type="radio" name="bhhState" value="WV" disabled />
+          <span>West Virginia (WV) — coming soon</span>
+        </label>
+      </div>
+
+      <p class="tag" style="padding: 12px 16px;">
+        For now, overlays are tuned for Ohio & Indiana.
+      </p>
+    </div>
+
+    <!-- Moon phases sheet -->
+    <div class="sheet" id="moonSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Moon Phases</h4>
+      <div class="content" id="moonContent"></div>
+    </div>
+
+    <!-- Hunt score sheet -->
+    <div class="sheet" id="scoreSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Hunt Score (next 48h)</h4>
+      <div class="content">
+        <div class="option">
+          <span>Location</span>
+          <div>
+            <label style="margin-right: 10px;"
+              ><input
+                type="radio"
+                name="scoreLoc"
+                value="gps"
+                checked
+              />
+              GPS</label
+            >
+            <label
+              ><input type="radio" name="scoreLoc" value="center" /> Map
+              center</label
+            >
+          </div>
+        </div>
+        <div class="option">
+          <span>Refresh data</span
+          ><button class="btn" id="scoreRefresh">Update</button>
+        </div>
+        <div class="score-list" id="scoreList"></div>
+        <p class="tag">
+          Score blends wind, temp, precip, light, and moon. Higher is better;
+          dusk/dawn often peak. Use with local knowledge.
+        </p>
+      </div>
+    </div>
+
+    <!-- Compass sheet -->
+    <div class="sheet" id="compassSheet" aria-hidden="true">
+      <div class="grab"></div>
+      <h4>Compass &amp; Bearing</h4>
+      <div class="content">
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+          "
+        >
+          <button class="btn" id="compEnable">Enable Compass</button>
+          <span class="tag" id="compHeadingText">Heading: --</span>
+        </div>
+        <div class="option">
+          <span>Anchor</span>
+          <div>
+            <label style="margin-right: 10px;"
+              ><input
+                type="radio"
+                name="compAnchor"
+                value="gps"
+                checked
+              />
+              GPS</label
+            >
+            <label
+              ><input type="radio" name="compAnchor" value="center" /> Map
+              center</label
+            >
+          </div>
+        </div>
+        <div class="option">
+          <span>Guide to</span>
+          <select id="compTarget"></select>
+        </div>
+        <div class="row">
+          <span>Distance</span><strong id="compDist" class="tag">--</strong>
+        </div>
+        <div class="row">
+          <span>Bearing</span><strong id="compBear" class="tag">--</strong>
+        </div>
+        <p class="tag">
+          Tip: In Waypoints, tap <b>Guide</b> on any item to set the target
+          here.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Turf.js for accurate area measurements (if you hook it up later) -->
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+  <!-- BHH main logic -->
+  <script src="field-info.js"></script>
+  <script src="main.js"></script>
+  <script src="sun-moon.js"></script>
+  <script src="hunt-score.js"></script>
+  <script src="export-import.js"></script>
+  <script src="pwa.js"></script>
+  <!-- [BHH: BODY END] -->
+</body>
+<!-- [BHH: HTML END] -->
+</html>
