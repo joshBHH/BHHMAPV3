@@ -576,92 +576,105 @@ loadOhioPublic();
 // [BHH: OVERLAYS – OHIO PUBLIC END]
 
 /*******************
- * OVERLAYS: Indiana Public Hunting (points)
+ * OVERLAYS: Indiana Public Hunting (points + lands)
  *******************/
-// [BHH: OVERLAYS – IN PUBLIC START]
-const indianaPublic = L.geoJSON(null, {
-  pointToLayer: (feat, latlng) =>
-    L.circleMarker(latlng, {
-      radius: 5,
-      color: '#f97316',
-      weight: 1.4,
-      fillColor: '#fed7aa',
-      fillOpacity: 0.9
-    }),
-  onEachFeature: (feat, layer) => {
-    const p = feat && feat.properties ? feat.properties : {};
+const indianaPublic = L.layerGroup();
 
-    // Title for popup
-    const name =
-      p.property ||
-      p.owner ||
-      'Public Hunting Area';
+// Shared popup builder for both points & polygons
+function bindIndianaHuntingPopup(feat, layer) {
+  const p = (feat && feat.properties) ? feat.properties : {};
 
-    // Fields in a sensible order
-    const preferred = [
-      'property', 'owner', 'huntfor',
-      'acres', 'acreage',
-      'access_', 'camping', 'shtrng', 'archrng',
-      'checkin', 'checknotes',
-      'mngdby', 'contact',
-      'mgr_city', 'mgr_zip',
-      'website', 'moreinfo'
-    ];
+  const preferred = [
+    'NAME', 'AREA_NAME', 'UNIT_NAME', 'TRACT_NAME', 'PROPERTY',
+    'PROP_NAME', 'SITE_NAME', 'HUNT_NAME',
+    'COUNTY', 'ACRES', 'AREA_ACRES', 'TYPE'
+  ];
 
-    const keysOrdered = [
-      ...new Set([
-        ...preferred.filter(k => k in p),
-        ...Object.keys(p)
-      ])
-    ].slice(0, 16);
+  const headerKey =
+    preferred.find(k => k in p) ||
+    Object.keys(p)[0];
 
-    const rows = keysOrdered.map(k => {
-      const label = k.toUpperCase();
-      return `<div><span style="color:#a3b7a6">${label}:</span> ${String(p[k])}</div>`;
-    }).join('');
+  const name = headerKey ? String(p[headerKey]) : 'Hunting Area';
 
-    // Clickable website link if present
-    const website =
-      p.website && typeof p.website === 'string'
-        ? p.website.trim()
-        : '';
+  const keysOrdered = [
+    ...new Set([
+      ...preferred.filter(k => k in p),
+      ...Object.keys(p)
+    ])
+  ].slice(0, 12);
 
-    let websiteLink = '';
-    if (website) {
-      const href = website.startsWith('http')
-        ? website
-        : 'https://' + website;
-      websiteLink =
-        `<div style="margin-top:6px;">
-           <a href="${href}" target="_blank" rel="noopener"
-              style="color:#93c5fd;text-decoration:underline;">
-             More info
-           </a>
-         </div>`;
-    }
+  const rows = keysOrdered.map(k =>
+    `<div><span style="color:#a3b7a6">${k}:</span> ${String(p[k])}</div>`
+  ).join('');
 
-    layer.bindPopup(
-      `<b>${name}</b><div style="margin-top:6px">${rows}</div>${websiteLink}`
-    );
-  }
-});
+  layer.bindPopup(
+    `<b>${name}</b>${
+      rows ? `<div style="margin-top:6px">${rows}</div>` : ''
+    }`
+  );
 
-async function loadIndianaPublic() {
-  try {
-    const url =
-      'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_RO/FeatureServer/1/query' +
-      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
-
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    indianaPublic.addData(j);
-  } catch (e) {
-    console.warn('Indiana public layer fetch failed', e);
+  // Only polygons/lines have setStyle – guard for points
+  if (layer.setStyle) {
+    layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+    layer.on('mouseout',  () => layer.setStyle({ weight: 2 }));
   }
 }
+
+// Points: "Indiana Hunting Area Points"
+const indianaPublicPoints = L.geoJSON(null, {
+  pointToLayer: (feat, latlng) =>
+    L.circleMarker(latlng, {
+      radius: 4,
+      color: '#22c55e',
+      fillColor: '#22c55e',
+      fillOpacity: 0.9,
+      weight: 1
+    }),
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+// Polygons: "Hunting Lands" layer (full areas)
+const indianaHuntingLands = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+// Put both into one group so your existing toggle uses a single layer
+indianaPublic.addLayer(indianaPublicPoints);
+indianaPublic.addLayer(indianaHuntingLands);
+
+async function loadIndianaPublic() {
+  // Points
+  try {
+    const ptsResp = await fetch(
+      'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_RO/FeatureServer/1/query?where=1%3D1&outFields=*&outSR=4326&f=geojson',
+      { cache: 'reload' }
+    );
+    if (ptsResp.ok) {
+      const ptsJson = await ptsResp.json();
+      indianaPublicPoints.addData(ptsJson);
+    }
+  } catch (e) {
+    console.warn('Indiana public hunting points load failed', e);
+  }
+
+  // Hunting Lands polygons
+  try {
+    const polyResp = await fetch(
+      'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_RO/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson',
+      { cache: 'reload' }
+    );
+    if (polyResp.ok) {
+      const polyJson = await polyResp.json();
+      indianaHuntingLands.addData(polyJson);
+    }
+  } catch (e) {
+    console.warn('Indiana hunting lands polygons load failed', e);
+  }
+}
+
 loadIndianaPublic();
-// [BHH: OVERLAYS – IN PUBLIC END]
+
 
 
 
