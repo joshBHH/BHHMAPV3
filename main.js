@@ -575,6 +575,95 @@ async function loadOhioPublic() {
 loadOhioPublic();
 // [BHH: OVERLAYS – OHIO PUBLIC END]
 
+/*******************
+ * OVERLAYS: Indiana Public Hunting (points)
+ *******************/
+// [BHH: OVERLAYS – IN PUBLIC START]
+const indianaPublic = L.geoJSON(null, {
+  pointToLayer: (feat, latlng) =>
+    L.circleMarker(latlng, {
+      radius: 5,
+      color: '#f97316',
+      weight: 1.4,
+      fillColor: '#fed7aa',
+      fillOpacity: 0.9
+    }),
+  onEachFeature: (feat, layer) => {
+    const p = feat && feat.properties ? feat.properties : {};
+
+    // Title for popup
+    const name =
+      p.property ||
+      p.owner ||
+      'Public Hunting Area';
+
+    // Fields in a sensible order
+    const preferred = [
+      'property', 'owner', 'huntfor',
+      'acres', 'acreage',
+      'access_', 'camping', 'shtrng', 'archrng',
+      'checkin', 'checknotes',
+      'mngdby', 'contact',
+      'mgr_city', 'mgr_zip',
+      'website', 'moreinfo'
+    ];
+
+    const keysOrdered = [
+      ...new Set([
+        ...preferred.filter(k => k in p),
+        ...Object.keys(p)
+      ])
+    ].slice(0, 16);
+
+    const rows = keysOrdered.map(k => {
+      const label = k.toUpperCase();
+      return `<div><span style="color:#a3b7a6">${label}:</span> ${String(p[k])}</div>`;
+    }).join('');
+
+    // Clickable website link if present
+    const website =
+      p.website && typeof p.website === 'string'
+        ? p.website.trim()
+        : '';
+
+    let websiteLink = '';
+    if (website) {
+      const href = website.startsWith('http')
+        ? website
+        : 'https://' + website;
+      websiteLink =
+        `<div style="margin-top:6px;">
+           <a href="${href}" target="_blank" rel="noopener"
+              style="color:#93c5fd;text-decoration:underline;">
+             More info
+           </a>
+         </div>`;
+    }
+
+    layer.bindPopup(
+      `<b>${name}</b><div style="margin-top:6px">${rows}</div>${websiteLink}`
+    );
+  }
+});
+
+async function loadIndianaPublic() {
+  try {
+    const url =
+      'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_RO/FeatureServer/1/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    indianaPublic.addData(j);
+  } catch (e) {
+    console.warn('Indiana public layer fetch failed', e);
+  }
+}
+loadIndianaPublic();
+// [BHH: OVERLAYS – IN PUBLIC END]
+
+
 
 /*******************
  * OVERLAYS: Ohio Counties + Labels
