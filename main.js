@@ -835,30 +835,44 @@ async function loadPaPublic() {
 
 
 
-// Illinois – currently using your local GeoJSON until we have a live ArcGIS URL
+// Illinois – live from IL DNR ArcGIS service
 const ilPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
 });
 
+// Base ArcGIS service URL for Illinois public-hunting polygons
+// (layer 19 of FedAid_and_LandUse FeatureServer)
+const IL_PUBLIC_SERVICE =
+  'https://gis.prairie.illinois.edu/arcgis/rest/services/OMLP/FedAid_and_LandUse/FeatureServer/19';
+
 async function loadIlPublic() {
+  if (!IL_PUBLIC_SERVICE) {
+    console.warn('IL_PUBLIC_SERVICE not configured');
+    return;
+  }
+
   try {
-    // TODO: when you find an IL DNR ArcGIS REST layer for public hunting,
-    // swap this to use a live URL like we did for Michigan / Wisconsin.
-    // Example:
-    //   const url = 'https://<IL-service-url>/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson';
-    //   const r = await fetch(url, { cache: 'reload' });
-    //
-    // For now we stick with your local file:
-    const r = await fetch('il_public_hunting.geojson', { cache: 'reload' });
-    if (r.ok) {
-      const j = await r.json();
-      ilPublic.addData(j);
-    }
+    // Only parcels where Hunting = 'Y' (your original URL used 'N')
+    const where = encodeURIComponent("Hunting = 'Y'");
+
+    const url =
+      IL_PUBLIC_SERVICE +
+      '/query?where=' + where +
+      '&outFields=*' +
+      '&outSR=4326' +
+      '&f=geojson';
+
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+    const j = await r.json();
+    ilPublic.addData(j);
   } catch (e) {
     console.warn('Illinois public hunting load failed', e);
   }
 }
+
 
 // Wisconsin – now wired to WI DNR managed lands MapServer (owned, easement, leased)
 const wiPublic = L.geoJSON(null, {
