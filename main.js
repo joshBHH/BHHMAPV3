@@ -690,7 +690,9 @@ const COUNTY_FIPS = {
   MI: '26',
   KY: '21',
   WV: '54',
-  PA: '42'
+  PA: '42',
+  IL: '17',
+  WI: '55'
 };
 
 const COUNTY_STATE_NAMES = {
@@ -699,7 +701,9 @@ const COUNTY_STATE_NAMES = {
   MI: 'Michigan',
   KY: 'Kentucky',
   WV: 'West Virginia',
-  PA: 'Pennsylvania'
+  PA: 'Pennsylvania',
+  IL: 'Illinois',
+  WI: 'Wisconsin'
 };
 
 // Registry: state -> { counties: L.GeoJSON, labels: L.LayerGroup }
@@ -731,12 +735,15 @@ function makeCountyLayersForState(stateCode) {
 }
 
 // Concrete layers (for compatibility with rest of code)
-const { counties: ohioCounties,    labels: countyLabels }        = makeCountyLayersForState('OH');
-const { counties: indianaCounties, labels: indianaCountyLabels } = makeCountyLayersForState('IN');
-const { counties: michiganCounties, labels: michiganCountyLabels } = makeCountyLayersForState('MI');
-const { counties: kentuckyCounties, labels: kentuckyCountyLabels } = makeCountyLayersForState('KY');
-const { counties: wvCounties,      labels: wvCountyLabels }      = makeCountyLayersForState('WV');
-const { counties: paCounties,      labels: paCountyLabels }      = makeCountyLayersForState('PA');
+const { counties: ohioCounties,      labels: countyLabels }          = makeCountyLayersForState('OH');
+const { counties: indianaCounties,   labels: indianaCountyLabels }   = makeCountyLayersForState('IN');
+const { counties: michiganCounties,  labels: michiganCountyLabels }  = makeCountyLayersForState('MI');
+const { counties: kentuckyCounties,  labels: kentuckyCountyLabels }  = makeCountyLayersForState('KY');
+const { counties: wvCounties,        labels: wvCountyLabels }        = makeCountyLayersForState('WV');
+const { counties: paCounties,        labels: paCountyLabels }        = makeCountyLayersForState('PA');
+const { counties: illinoisCounties,  labels: illinoisCountyLabels }  = makeCountyLayersForState('IL');
+const { counties: wisconsinCounties, labels: wisconsinCountyLabels } = makeCountyLayersForState('WI');
+
 
 // Label font size based on zoom
 function labelFontForZoom(z) {
@@ -859,11 +866,12 @@ async function loadStateCounties(stateCode) {
 }
 
 // Load all states' counties once
-['OH','IN','MI','KY','WV','PA'].forEach(loadStateCounties);
+['OH','IN','MI','KY','WV','PA','IL','WI'].forEach(loadStateCounties);
 
 map.on('zoomend', refreshAllCountyLabels);
 
 // [BHH: OVERLAYS – COUNTIES END]
+
 
 
 
@@ -2743,7 +2751,7 @@ const STATE_CFG = {
   center: [40.0000, -89.0000],
   zoom: 7,
   hasPublic: false,
-  hasCounties: false,
+  hasCounties: true,
   hasWaterfowl: false
 },
 WI: {
@@ -2751,7 +2759,7 @@ WI: {
   center: [44.5000, -89.5000],
   zoom: 7,
   hasPublic: false,
-  hasCounties: false,
+  hasCounties: true,
   hasWaterfowl: false
 }
 };
