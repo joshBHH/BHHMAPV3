@@ -2828,7 +2828,6 @@ const STATE_CFG = {
   }
 };
 
-
 let currentState =
   (localStorage.getItem(STORAGE_STATE) || 'OH').toUpperCase();
 
@@ -2844,7 +2843,7 @@ function onStateChanged() {
   const wantedPublic   = ovlOhio     && ovlOhio.checked;
   const wantedCounties = ovlCounties && ovlCounties.checked;
 
-    const cfg = STATE_CFG[currentState] || STATE_CFG.OH;
+  const cfg = STATE_CFG[currentState] || STATE_CFG.OH;
   if (cfg) map.setView(cfg.center, cfg.zoom);
 
   const lblPublic    = document.getElementById('lblPublic');
@@ -2914,8 +2913,7 @@ function onStateChanged() {
 
   // Make sure our overlay checkboxes match what's actually on the map
   syncOverlayChecks();
-
-
+}  // ← this closing brace was missing
 
 function setState(code, save = true) {
   const c = (code || 'OH').toUpperCase();
@@ -2948,6 +2946,7 @@ if (stateApplyBtn) {
   };
 }
 // [BHH: STATE – LOGIC END]
+
 
 
 
