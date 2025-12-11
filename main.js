@@ -2825,7 +2825,23 @@ const STATE_CFG = {
     hasPublic: false,
     hasCounties: false,
     hasWaterfowl: false
-  }
+  },
+  IL: {
+  name: 'Illinois',
+  center: [40.0000, -89.0000],
+  zoom: 7,
+  hasPublic: false,
+  hasCounties: false,
+  hasWaterfowl: false
+},
+WI: {
+  name: 'Wisconsin',
+  center: [44.5000, -89.5000],
+  zoom: 7,
+  hasPublic: false,
+  hasCounties: false,
+  hasWaterfowl: false
+}
 };
 
 let currentState =
