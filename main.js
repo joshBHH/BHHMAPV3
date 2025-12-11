@@ -689,7 +689,7 @@ const michiganPublic = L.geoJSON(null, {
 
 async function loadMichiganPublic() {
   try {
-    const r = await fetch('mi_public_hunting.geojson', { cache: 'reload' });
+    const r = await fetch('https://gisp.mcgi.state.mi.us/arcgis/rest/services/DNR/MIHUNT/MapServer/30', { cache: 'reload' });
     if (r.ok) {
       const j = await r.json();
       michiganPublic.addData(j);
