@@ -1085,10 +1085,49 @@ function onEachIndianaWaterfowl(feat, layer) {
   layer.on('mouseout',  () => layer.setStyle({ weight: 2 }));
 }
 
+// --- Indiana-specific popup + styling ---
+function decorateIndianaWaterfowlFeature(feat, layer) {
+  const p = feat.properties || {};
+
+  // Field is "zone" in the Indiana service: North / Central / South
+  const rawZone = (p.zone || p.ZONE || '').toString().trim();
+  const zoneName = rawZone
+    ? `${rawZone} Waterfowl Zone`          // e.g. "North Waterfowl Zone"
+    : 'Indiana Waterfowl Zone';
+
+  // Optional description field if they ever use it
+  const desc = (p.description || p.DESCRIPTION || '').toString().trim();
+  const body = desc
+    ? `<div style="margin-top:6px">${desc}</div>`
+    : '';
+
+  layer.bindPopup(`<b>${zoneName}</b>${body}`);
+
+  layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+  layer.on('mouseout', () => layer.setStyle({ weight: 2 }));
+}
+
+// Indiana waterfowl polygons (from IN DNR service)
 const indianaWaterfowlZones = L.geoJSON(null, {
-  style: indianaZoneStyle,
-  onEachFeature: onEachIndianaWaterfowl
+  style: (feat) => {
+    const p = feat.properties || {};
+    const z = (p.zone || p.ZONE || '').toString().toLowerCase();
+
+    // Different colors for each zone
+    let color = '#22c55e';       // default / North
+    if (z === 'central') color = '#3b82f6';   // blue
+    else if (z === 'south') color = '#f97316'; // orange
+
+    return {
+      color,
+      weight: 2,
+      fillColor: color,
+      fillOpacity: 0.25
+    };
+  },
+  onEachFeature: decorateIndianaWaterfowlFeature
 });
+
 
 // Indiana DNR hosted waterfowl zones service (polygon layer)
 const IN_WATERFOWL_SERVICE =
