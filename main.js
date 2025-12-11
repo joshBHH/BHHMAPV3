@@ -731,20 +731,31 @@ const michiganPublic = L.geoJSON(null, {
 });
 
 async function loadMichiganPublic() {
-  try {
-    const url =
-      'https://gisp.mcgi.state.mi.us/arcgis/rest/services/DNR/MIHUNT/MapServer/30/query' +
-      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+  // MIHUNT group-layer 30 has several polygon sublayers (31–34)
+  const subLayerIds = [31, 32, 33, 34];
 
-    const resp = await fetch(url, { cache: 'reload' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  // Optional: clear in case this gets called more than once
+  michiganPublic.clearLayers();
 
-    const json = await resp.json();
-    michiganPublic.addData(json);
-  } catch (e) {
-    console.warn('Michigan public hunting load failed', e);
+  for (const id of subLayerIds) {
+    try {
+      const url =
+        `https://gisp.mcgi.state.mi.us/arcgis/rest/services/DNR/MIHUNT/MapServer/${id}/query` +
+        '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+      const resp = await fetch(url, { cache: 'reload' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+      const json = await resp.json();
+      michiganPublic.addData(json);
+    } catch (e) {
+      console.warn('Michigan public hunting sublayer', id, 'load failed', e);
+    }
   }
 }
+
+loadMichiganPublic();
+
 
 
 /*******************
@@ -807,19 +818,21 @@ const paPublic = L.geoJSON(null, {
 
 async function loadPaPublic() {
   try {
-    // PA State Game Lands polygons – 440W_Map_WFL1 FeatureServer/1 
     const url =
-      'https://services9.arcgis.com/6EuFgO4fLTqfNOhu/ArcGIS/rest/services/440W_Map_WFL1/FeatureServer/1/query' +
+      'https://mapservices.pasda.psu.edu/server/rest/services/pasda/PennsylvaniaGameCommission/MapServer/4/query' +
       '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
 
-    const r = await fetch(url, { cache: 'reload' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    paPublic.addData(j);
+    const resp = await fetch(url, { cache: 'reload' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    const json = await resp.json();
+    paPublic.clearLayers();
+    paPublic.addData(json);
   } catch (e) {
     console.warn('Pennsylvania public hunting load failed', e);
   }
 }
+
 
 
 /*******************
