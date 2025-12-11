@@ -2776,9 +2776,58 @@ const stateSheetRadios = Array.from(
 );
 
 const STATE_CFG = {
-  OH: { name: 'Ohio',    center: [40.4173, -82.9071], zoom: 7 },
-  IN: { name: 'Indiana', center: [39.905,  -86.2816], zoom: 7 }
+  OH: {
+    name: 'Ohio',
+    center: [40.4173, -82.9071],
+    zoom: 7,
+    hasPublic: true,
+    hasCounties: true,
+    hasWaterfowl: true
+  },
+  IN: {
+    name: 'Indiana',
+    center: [39.905, -86.2816],
+    zoom: 7,
+    hasPublic: true,
+    hasCounties: true,
+    hasWaterfowl: true
+  },
+
+  // New “quick add” states – map view only for now
+  MI: {
+    name: 'Michigan',
+    center: [44.1822, -84.5068], // approx center-of-state
+    zoom: 7,
+    hasPublic: false,
+    hasCounties: false,
+    hasWaterfowl: false
+  },
+  KY: {
+    name: 'Kentucky',
+    center: [37.8393, -84.2700],
+    zoom: 7,
+    hasPublic: false,
+    hasCounties: false,
+    hasWaterfowl: false
+  },
+  WV: {
+    name: 'West Virginia',
+    center: [38.5976, -80.4549],
+    zoom: 7,
+    hasPublic: false,
+    hasCounties: false,
+    hasWaterfowl: false
+  },
+  PA: {
+    name: 'Pennsylvania',
+    center: [40.9690, -77.7279],
+    zoom: 7,
+    hasPublic: false,
+    hasCounties: false,
+    hasWaterfowl: false
+  }
 };
+
 
 let currentState =
   (localStorage.getItem(STORAGE_STATE) || 'OH').toUpperCase();
@@ -2795,44 +2844,42 @@ function onStateChanged() {
   const wantedPublic   = ovlOhio     && ovlOhio.checked;
   const wantedCounties = ovlCounties && ovlCounties.checked;
 
-  const cfg = STATE_CFG[currentState];
+    const cfg = STATE_CFG[currentState] || STATE_CFG.OH;
   if (cfg) map.setView(cfg.center, cfg.zoom);
 
   const lblPublic    = document.getElementById('lblPublic');
   const lblCounties  = document.getElementById('lblCounties');
   const lblWaterfowl = document.getElementById('lblWaterfowl');
 
-  const isOH = currentState === 'OH';
-  const isIN = currentState === 'IN';
+  const supportsPublic    = !!cfg.hasPublic;
+  const supportsCounties  = !!cfg.hasCounties;
+  const supportsWaterfowl = !!cfg.hasWaterfowl;
 
-  // Update labels
+  // Update labels to show state name or “coming soon”
   if (lblCounties) {
-    lblCounties.textContent =
-      isIN ? 'Indiana Counties' :
-      isOH ? 'Ohio Counties' :
-      'State Counties (coming soon)';
+    lblCounties.textContent = supportsCounties
+      ? `${cfg.name} Counties`
+      : 'State Counties (coming soon)';
   }
 
   if (lblPublic) {
-    lblPublic.textContent =
-      isIN ? 'Indiana Public Hunting' :
-      isOH ? 'Ohio Public Hunting' :
-      'Public Hunting (coming soon)';
+    lblPublic.textContent = supportsPublic
+      ? `${cfg.name} Public Hunting`
+      : 'Public Hunting (coming soon)';
   }
 
   if (lblWaterfowl) {
-    lblWaterfowl.textContent =
-      isIN ? 'Indiana Waterfowl Zones' :
-      isOH ? 'Ohio Waterfowl Zones' :
-      'Waterfowl Zones (coming soon)';
+    lblWaterfowl.textContent = supportsWaterfowl
+      ? `${cfg.name} Waterfowl Zones`
+      : 'Waterfowl Zones (coming soon)';
   }
 
-  // Enable Public / Counties / Waterfowl for OH & IN
-  if (ovlOhio)      ovlOhio.disabled      = !(isOH || isIN);
-  if (ovlCounties)  ovlCounties.disabled  = !(isOH || isIN);
-  if (ovlWaterfowl) ovlWaterfowl.disabled = !(isOH || isIN);
+  // Enable/disable overlay toggles based on support flags
+  if (ovlOhio)      ovlOhio.disabled      = !supportsPublic;
+  if (ovlCounties)  ovlCounties.disabled  = !supportsCounties;
+  if (ovlWaterfowl) ovlWaterfowl.disabled = !supportsWaterfowl;
 
-  // Remove all state-specific overlays
+  // Remove all state-specific overlays (we only have OH + IN currently)
   if (map.hasLayer(ohioPublic))          map.removeLayer(ohioPublic);
   if (map.hasLayer(indianaPublic))       map.removeLayer(indianaPublic);
 
@@ -2843,34 +2890,31 @@ function onStateChanged() {
 
   // Re-add for the new state based on current checkboxes
   if (wantedPublic && ovlOhio && !ovlOhio.disabled) {
-    if (isIN) {
+    if (currentState === 'IN') {
       indianaPublic.addTo(map);
-    } else if (isOH) {
+    } else if (currentState === 'OH') {
       ohioPublic.addTo(map);
     }
   }
 
   if (wantedCounties && ovlCounties && !ovlCounties.disabled) {
-    if (isIN) {
+    if (currentState === 'IN') {
       indianaCounties.addTo(map);
       indianaCountyLabels.addTo(map);
       refreshIndianaCountyLabels();
-    } else if (isOH) {
+    } else if (currentState === 'OH') {
       ohioCounties.addTo(map);
       countyLabels.addTo(map);
       refreshCountyLabels();
     }
   }
 
-    // Waterfowl zones: ensure only the active state's layer is visible
+  // Waterfowl zones: ensure only the active state's layer is visible
   updateWaterfowlVisibility();
 
   // Make sure our overlay checkboxes match what's actually on the map
   syncOverlayChecks();
-}
 
-  // Make sure our overlay checkboxes match what's actually on the map
-  syncOverlayChecks();
 
 
 function setState(code, save = true) {
