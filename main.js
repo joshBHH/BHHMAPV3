@@ -2832,7 +2832,7 @@ function onStateChanged() {
 
   // Make sure our overlay checkboxes match what's actually on the map
   syncOverlayChecks();
-}
+
 
 function setState(code, save = true) {
   const c = (code || 'OH').toUpperCase();
