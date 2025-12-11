@@ -960,65 +960,76 @@ map.on('overlayremove', (e) => {
  *******************/
 // [BHH: OVERLAYS – WATERFOWL ZONES START]
 
-// One overlay toggle in the UI controls this group:
+// One overlay toggle in the UI controls this group.
+// Contents depend on currentState (OH or IN).
 const waterfowlZones = L.layerGroup();
 
-// --- Common styling / popup logic for all waterfowl features ---
-function decorateWaterfowlFeature(feat, layer) {
-  const p = feat.properties || {};
+// Shared helper to infer a zone name from feature properties
+function inferZoneName(props) {
+  if (!props) return '';
 
-  // Try a bunch of common field names to get a zone name
-  const name =
-    p.Zone_ ||
-    p.ZONE_NAME ||
-    p.ZoneName ||
-    p.ZONE ||
-    p.ZONE_LABEL ||
-    'Waterfowl Zone';
+  const candidateKeys = [
+    'Zone_', 'ZONE_', 'ZONE_NAME', 'ZoneName',
+    'ZONE', 'ZONE_LABEL', 'LABEL', 'NAME'
+  ];
 
-  const duck =
-    p.DuckSeason || p.DUCK_SEASON || p.DUCK || p.DUCK_SEAS || '';
-  const goose =
-    p.GooseSeason || p.GOOSE_SEASON || p.GOOSE || p.GOOSE_SEAS || '';
+  for (const k of candidateKeys) {
+    if (props[k] != null && props[k] !== '') {
+      return String(props[k]);
+    }
+  }
 
-  const rows = [
-    duck
-      ? `<div><span style="color:#a3b7a6">Duck:</span> ${duck}</div>`
-      : '',
-    goose
-      ? `<div><span style="color:#a3b7a6">Goose:</span> ${goose}</div>`
-      : ''
-  ].join('');
+  // Fallback: any string value that mentions "zone"
+  for (const v of Object.values(props)) {
+    if (typeof v === 'string' && /zone/i.test(v)) {
+      return v;
+    }
+  }
 
-  layer.bindPopup(
-    `<b>${name}</b>${
-      rows ? `<div style="margin-top:6px">${rows}</div>` : ''
-    }`
-  );
-
-  layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
-  layer.on('mouseout', () => layer.setStyle({ weight: 2 }));
+  return '';
 }
 
-// Ohio waterfowl polygons (same ODNR service you already had)
+/* ---------- OHIO WATERFOWL ZONES ---------- */
+
+function ohioZoneStyle(feat) {
+  const name = inferZoneName(feat.properties).toUpperCase();
+  let color = '#22c55e'; // default green
+
+  if (name.includes('NORTH')) {
+    color = '#22c55e';          // North Zone
+  } else if (name.includes('SOUTH')) {
+    color = '#f97316';          // South Zone
+  } else if (
+    name.includes('LAKE') ||
+    name.includes('MARSH') ||
+    name.includes('ERIE')
+  ) {
+    color = '#38bdf8';          // Lake Erie Marsh Zone
+  }
+
+  return {
+    color,
+    weight: 2,
+    fillOpacity: 0.18
+  };
+}
+
+function onEachOhioWaterfowl(feat, layer) {
+  const raw = inferZoneName(feat.properties);
+  const name = raw || 'Ohio Waterfowl Zone';
+
+  // Ohio: ONLY show the zone label (no dates/seasons)
+  layer.bindPopup(`<b>${name}</b>`);
+
+  layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+  layer.on('mouseout',  () => layer.setStyle({ weight: 2 }));
+}
+
 const ohioWaterfowlZones = L.geoJSON(null, {
-  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
-  onEachFeature: decorateWaterfowlFeature
+  style: ohioZoneStyle,
+  onEachFeature: onEachOhioWaterfowl
 });
 
-// Indiana waterfowl polygons (from IN DNR service)
-const indianaWaterfowlZones = L.geoJSON(null, {
-  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
-  onEachFeature: decorateWaterfowlFeature
-});
-
-// Add both to the overlay group; the checkbox just toggles this group
-ohioWaterfowlZones.addTo(waterfowlZones);
-indianaWaterfowlZones.addTo(waterfowlZones);
-
-// ---- Data loaders ----
-
-// OHIO: ODNR Hunting Regulations service
 async function loadOhioWaterfowlZones() {
   try {
     const url =
@@ -1033,22 +1044,58 @@ async function loadOhioWaterfowlZones() {
   }
 }
 
-// INDIANA: you must paste the REST service URL for the
-// “Hunting Areas Waterfowl Zones” layer from your Experience map.
-// It will look something like:
-//   https://.../arcgis/rest/services/.../FeatureServer/0
-//
-// 1. Open that layer in ArcGIS (from the Experience: ... > More details).
-// 2. Copy the layer’s REST URL.
-// 3. Replace the placeholder string below with that URL.
+/* ---------- INDIANA WATERFOWL ZONES ---------- */
+
+function indianaZoneStyle(feat) {
+  const name = inferZoneName(feat.properties).toUpperCase();
+  let color = '#22c55e'; // default
+
+  if (name.includes('NORTH')) {
+    color = '#22c55e';          // North
+  } else if (name.includes('CENTRAL')) {
+    color = '#eab308';          // Central
+  } else if (name.includes('SOUTH')) {
+    color = '#f97316';          // South
+  }
+
+  return {
+    color,
+    weight: 2,
+    fillOpacity: 0.18
+  };
+}
+
+function onEachIndianaWaterfowl(feat, layer) {
+  const raw = inferZoneName(feat.properties);
+  let name = raw || 'Indiana Waterfowl Zone';
+
+  // If the value is just "North", "Central", or "South", make it a full label
+  const upper = name.toUpperCase();
+  if (/NORTH\b/i.test(name) && !/WATERFOWL/i.test(name)) {
+    name = 'North Waterfowl Zone';
+  } else if (/CENTRAL\b/i.test(name) && !/WATERFOWL/i.test(name)) {
+    name = 'Central Waterfowl Zone';
+  } else if (/SOUTH\b/i.test(name) && !/WATERFOWL/i.test(name)) {
+    name = 'South Waterfowl Zone';
+  }
+
+  layer.bindPopup(`<b>${name}</b>`);
+
+  layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+  layer.on('mouseout',  () => layer.setStyle({ weight: 2 }));
+}
+
+const indianaWaterfowlZones = L.geoJSON(null, {
+  style: indianaZoneStyle,
+  onEachFeature: onEachIndianaWaterfowl
+});
+
 // Indiana DNR hosted waterfowl zones service (polygon layer)
 const IN_WATERFOWL_SERVICE =
   'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_Waterfowl_Zones/FeatureServer/0';
 
-
 async function loadIndianaWaterfowlZones() {
-  if (!IN_WATERFOWL_SERVICE ||
-      IN_WATERFOWL_SERVICE.includes('https://experience.arcgis.com/experience/88e4745e813c4d3b9fb7e50084280f4e')) {
+  if (!IN_WATERFOWL_SERVICE) {
     console.warn('Indiana waterfowl service URL not configured yet.');
     return;
   }
@@ -1067,13 +1114,38 @@ async function loadIndianaWaterfowlZones() {
   }
 }
 
-// Kick off both loads (they run in the background)
+/* ---------- STATE-AWARE VISIBILITY ---------- */
+
+function updateWaterfowlVisibility() {
+  if (!ovlWaterfowl) return;
+
+  // Always clear everything first so only one state is active at a time
+  waterfowlZones.clearLayers();
+
+  if (!ovlWaterfowl.checked) {
+    if (map.hasLayer(waterfowlZones)) map.removeLayer(waterfowlZones);
+    return;
+  }
+
+  if (currentState === 'OH') {
+    waterfowlZones.addLayer(ohioWaterfowlZones);
+  } else if (currentState === 'IN') {
+    waterfowlZones.addLayer(indianaWaterfowlZones);
+  }
+
+  if (!map.hasLayer(waterfowlZones)) {
+    waterfowlZones.addTo(map);
+  }
+}
+
+// Kick off both data loads (they just populate the layers)
 function loadWaterfowlZones() {
   loadOhioWaterfowlZones();
   loadIndianaWaterfowlZones();
 }
 loadWaterfowlZones();
 // [BHH: OVERLAYS – WATERFOWL ZONES END]
+
 
 
 
@@ -1161,10 +1233,10 @@ ovlCounties.onchange = () => {
   }
 };
 
-ovlWaterfowl.onchange =
-  () => ovlWaterfowl.checked
-    ? waterfowlZones.addTo(map)
-    : map.removeLayer(waterfowlZones);
+ovlWaterfowl.onchange = () => {
+  updateWaterfowlVisibility();
+};
+
 
 ovlDraw.onchange =
   () => {
@@ -2750,6 +2822,13 @@ function onStateChanged() {
       refreshCountyLabels();
     }
   }
+
+    // Waterfowl zones: ensure only the active state's layer is visible
+  updateWaterfowlVisibility();
+
+  // Make sure our overlay checkboxes match what's actually on the map
+  syncOverlayChecks();
+}
 
   // Make sure our overlay checkboxes match what's actually on the map
   syncOverlayChecks();
