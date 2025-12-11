@@ -2694,6 +2694,7 @@ function onStateChanged() {
   const isOH = currentState === 'OH';
   const isIN = currentState === 'IN';
 
+  // Update labels
   if (lblCounties) {
     lblCounties.textContent =
       isIN ? 'Indiana Counties' :
@@ -2708,16 +2709,52 @@ function onStateChanged() {
       'Public Hunting (coming soon)';
   }
 
-    if (lblWaterfowl)
+  if (lblWaterfowl) {
     lblWaterfowl.textContent =
-      (currentState === 'IN')
-        ? 'Indiana Waterfowl Zones'
-        : 'Ohio Waterfowl Zones';
+      isIN ? 'Indiana Waterfowl Zones' :
+      isOH ? 'Ohio Waterfowl Zones' :
+      'Waterfowl Zones (coming soon)';
+  }
 
-  const isOH = currentState === 'OH';
-  ovlOhio.disabled = !isOH;    // Ohio public lands still OH-only
-  ovlWaterfowl.disabled = false; // Waterfowl overlay works for both states now
-  ovlCounties.disabled = false;
+  // Enable all three overlays for OH + IN (and disable if you ever add "other" states)
+  if (ovlOhio)      ovlOhio.disabled      = !(isOH || isIN);
+  if (ovlCounties)  ovlCounties.disabled  = !(isOH || isIN);
+  if (ovlWaterfowl) ovlWaterfowl.disabled = !(isOH || isIN);
+
+  // Remove all state-specific overlays
+  if (map.hasLayer(ohioPublic))    map.removeLayer(ohioPublic);
+  if (map.hasLayer(indianaPublic)) map.removeLayer(indianaPublic);
+
+  if (map.hasLayer(ohioCounties))        map.removeLayer(ohioCounties);
+  if (map.hasLayer(countyLabels))        map.removeLayer(countyLabels);
+  if (map.hasLayer(indianaCounties))     map.removeLayer(indianaCounties);
+  if (map.hasLayer(indianaCountyLabels)) map.removeLayer(indianaCountyLabels);
+
+  // Re-add for the new state based on current checkboxes
+  if (wantedPublic && ovlOhio && !ovlOhio.disabled) {
+    if (isIN) {
+      indianaPublic.addTo(map);
+    } else if (isOH) {
+      ohioPublic.addTo(map);
+    }
+  }
+
+  if (wantedCounties && ovlCounties && !ovlCounties.disabled) {
+    if (isIN) {
+      indianaCounties.addTo(map);
+      indianaCountyLabels.addTo(map);
+      refreshIndianaCountyLabels();
+    } else if (isOH) {
+      ohioCounties.addTo(map);
+      countyLabels.addTo(map);
+      refreshCountyLabels();
+    }
+  }
+
+  // Make sure the overlay checkboxes line up with reality
+  syncOverlayChecks();
+}
+
 
 
   // Enable Public + Counties for OH/IN, disable elsewhere
