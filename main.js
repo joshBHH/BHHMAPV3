@@ -675,6 +675,141 @@ async function loadIndianaPublic() {
 
 loadIndianaPublic();
 
+/*******************
+ * OVERLAYS: Public Hunting (other states via local GeoJSON)
+ *******************/
+// These layers all use the same popup builder we used for Indiana:
+//   bindIndianaHuntingPopup(feat, layer)
+
+// Michigan
+const michiganPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadMichiganPublic() {
+  try {
+    const r = await fetch('mi_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      michiganPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('Michigan public hunting load failed', e);
+  }
+}
+
+// Kentucky
+const kentuckyPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadKentuckyPublic() {
+  try {
+    const r = await fetch('ky_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      kentuckyPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('Kentucky public hunting load failed', e);
+  }
+}
+
+// West Virginia
+const wvPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadWvPublic() {
+  try {
+    const r = await fetch('wv_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      wvPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('West Virginia public hunting load failed', e);
+  }
+}
+
+// Pennsylvania
+const paPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadPaPublic() {
+  try {
+    const r = await fetch('pa_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      paPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('Pennsylvania public hunting load failed', e);
+  }
+}
+
+// Illinois
+const ilPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadIlPublic() {
+  try {
+    const r = await fetch('il_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      ilPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('Illinois public hunting load failed', e);
+  }
+}
+
+// Wisconsin
+const wiPublic = L.geoJSON(null, {
+  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
+  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+});
+
+async function loadWiPublic() {
+  try {
+    const r = await fetch('wi_public_hunting.geojson', { cache: 'reload' });
+    if (r.ok) {
+      const j = await r.json();
+      wiPublic.addData(j);
+    }
+  } catch (e) {
+    console.warn('Wisconsin public hunting load failed', e);
+  }
+}
+
+// Kick off loads (if files are missing, you'll just see console warnings)
+loadMichiganPublic();
+loadKentuckyPublic();
+loadWvPublic();
+loadPaPublic();
+loadIlPublic();
+loadWiPublic();
+
+// Registry so UI can treat “Public Hunting” generically per state
+const PUBLIC_BY_STATE = {
+  OH: ohioPublic,
+  IN: indianaPublic,
+  MI: michiganPublic,
+  KY: kentuckyPublic,
+  WV: wvPublic,
+  PA: paPublic,
+  IL: ilPublic,
+  WI: wiPublic
+};
+
+
 
 
 
@@ -1138,11 +1273,10 @@ const ovlTrack = document.getElementById('ovlTrack');
 function syncOverlayChecks() {
   if (!ovlOhio || !ovlCounties || !ovlWaterfowl || !ovlDraw || !ovlMarks || !ovlTrack) return;
 
-  // Public hunting: currently only wired for OH & IN
-  if (currentState === 'IN') {
-    ovlOhio.checked = map.hasLayer(indianaPublic);
-  } else if (currentState === 'OH') {
-    ovlOhio.checked = map.hasLayer(ohioPublic);
+  // Public hunting: any state that has a registered layer
+  const pubLayer = PUBLIC_BY_STATE[currentState];
+  if (pubLayer) {
+    ovlOhio.checked = map.hasLayer(pubLayer);
   } else {
     ovlOhio.checked = false;
   }
@@ -1162,21 +1296,21 @@ function syncOverlayChecks() {
 
 
 
+
 ovlOhio.onchange = () => {
-  if (currentState === 'IN') {
-    if (ovlOhio.checked) {
-      indianaPublic.addTo(map);
-    } else {
-      map.removeLayer(indianaPublic);
-    }
+  const pubLayer = PUBLIC_BY_STATE[currentState];
+  if (!pubLayer) {
+    ovlOhio.checked = false;
+    return;
+  }
+  if (ovlOhio.checked) {
+    pubLayer.addTo(map);
   } else {
-    if (ovlOhio.checked) {
-      ohioPublic.addTo(map);
-    } else {
-      map.removeLayer(ohioPublic);
-    }
+    map.removeLayer(pubLayer);
   }
 };
+
+
 
 
 ovlCounties.onchange = () => {
@@ -2750,7 +2884,7 @@ const STATE_CFG = {
   name: 'Illinois',
   center: [40.0000, -89.0000],
   zoom: 7,
-  hasPublic: false,
+  hasPublic: true,
   hasCounties: true,
   hasWaterfowl: false
 },
@@ -2758,7 +2892,7 @@ WI: {
   name: 'Wisconsin',
   center: [44.5000, -89.5000],
   zoom: 7,
-  hasPublic: false,
+  hasPublic: true,
   hasCounties: true,
   hasWaterfowl: false
 }
@@ -2816,9 +2950,12 @@ function onStateChanged() {
 
   // Remove all state-specific overlays first
 
-  // Public hunting (currently OH & IN only)
-  if (map.hasLayer(ohioPublic))    map.removeLayer(ohioPublic);
-  if (map.hasLayer(indianaPublic)) map.removeLayer(indianaPublic);
+  // Public hunting: remove all registered layers
+  Object.values(PUBLIC_BY_STATE).forEach(layer => {
+    if (layer && map.hasLayer(layer)) {
+      map.removeLayer(layer);
+    }
+  });
 
   // Counties for all supported states
   Object.keys(COUNTY_REG).forEach(code => {
@@ -2832,12 +2969,10 @@ function onStateChanged() {
 
   // Public hunting
   if (wantedPublic && ovlOhio && !ovlOhio.disabled) {
-    if (currentState === 'IN') {
-      indianaPublic.addTo(map);
-    } else if (currentState === 'OH') {
-      ohioPublic.addTo(map);
-    }
+    const pubLayer = PUBLIC_BY_STATE[currentState];
+    if (pubLayer) pubLayer.addTo(map);
   }
+
 
   // Counties
   if (wantedCounties && ovlCounties && !ovlCounties.disabled) {
