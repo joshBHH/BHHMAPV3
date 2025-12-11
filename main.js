@@ -681,23 +681,73 @@ loadIndianaPublic();
 // These layers all use the same popup builder we used for Indiana:
 //   bindIndianaHuntingPopup(feat, layer)
 
-// Michigan
+/*******************
+ * OVERLAYS: Michigan Public Hunting
+ *******************/
 const michiganPublic = L.geoJSON(null, {
-  style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
-  onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
+  style: {
+    color: '#22c55e',
+    weight: 2,
+    fillOpacity: 0.15
+  },
+  onEachFeature: (feat, layer) => {
+    const p = (feat && feat.properties) ? feat.properties : {};
+
+    // Try to guess a good display name
+    const preferred = [
+      'NAME', 'AREA_NAME', 'UNIT_NAME', 'TRACT_NAME', 'PROPERTY',
+      'PROP_NAME', 'SITE_NAME', 'HUNT_NAME', 'AREANAME',
+      'COUNTY', 'ACRES', 'TYPE'
+    ];
+
+    const headerKey =
+      preferred.find(k => k in p) ||
+      Object.keys(p)[0];
+
+    const name = headerKey ? String(p[headerKey]) : 'Public Hunting Area';
+
+    const keysOrdered = [
+      ...new Set([
+        ...preferred.filter(k => k in p),
+        ...Object.keys(p)
+      ])
+    ].slice(0, 12);
+
+    const rows = keysOrdered.map(k =>
+      `<div><span style="color:#a3b7a6">${k}:</span> ${String(p[k])}</div>`
+    ).join('');
+
+    layer.bindPopup(
+      `<b>${name}</b>${
+        rows ? `<div style="margin-top:6px">${rows}</div>` : ''
+      }`
+    );
+
+    if (layer.setStyle) {
+      layer.on('mouseover', () => layer.setStyle({ weight: 3 }));
+      layer.on('mouseout',  () => layer.setStyle({ weight: 2 }));
+    }
+  }
 });
 
 async function loadMichiganPublic() {
   try {
-    const r = await fetch('https://gisp.mcgi.state.mi.us/arcgis/rest/services/DNR/MIHUNT/MapServer/30', { cache: 'reload' });
-    if (r.ok) {
-      const j = await r.json();
-      michiganPublic.addData(j);
-    }
+    const url =
+      'https://gisp.mcgi.state.mi.us/arcgis/rest/services/DNR/MIHUNT/MapServer/30/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const resp = await fetch(url, { cache: 'reload' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    const json = await resp.json();
+    michiganPublic.addData(json);
   } catch (e) {
     console.warn('Michigan public hunting load failed', e);
   }
 }
+
+loadMichiganPublic();
+
 
 // Kentucky
 const kentuckyPublic = L.geoJSON(null, {
