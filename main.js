@@ -835,10 +835,7 @@ async function loadPaPublic() {
 
 
 
-/*******************
- * OVERLAYS: Illinois Public Hunting
- * (still using local GeoJSON until we have a good ArcGIS URL)
- *******************/
+// Illinois – currently using your local GeoJSON until we have a live ArcGIS URL
 const ilPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -846,6 +843,13 @@ const ilPublic = L.geoJSON(null, {
 
 async function loadIlPublic() {
   try {
+    // TODO: when you find an IL DNR ArcGIS REST layer for public hunting,
+    // swap this to use a live URL like we did for Michigan / Wisconsin.
+    // Example:
+    //   const url = 'https://<IL-service-url>/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+    //   const r = await fetch(url, { cache: 'reload' });
+    //
+    // For now we stick with your local file:
     const r = await fetch('il_public_hunting.geojson', { cache: 'reload' });
     if (r.ok) {
       const j = await r.json();
@@ -856,27 +860,55 @@ async function loadIlPublic() {
   }
 }
 
-
-/*******************
- * OVERLAYS: Wisconsin Public Hunting
- * (still using local GeoJSON until we have a good ArcGIS URL)
- *******************/
+// Wisconsin – now wired to WI DNR managed lands MapServer (owned, easement, leased)
 const wiPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
 });
 
 async function loadWiPublic() {
-  try {
-    const r = await fetch('wi_public_hunting.geojson', { cache: 'reload' });
-    if (r.ok) {
+  // First try the live WI DNR service
+  const base =
+    'https://dnrmaps.wi.gov/arcgis/rest/services/LF_DML/' +
+    'LF_DNR_MGD_LAND_NoAnno_WTM_Ext/MapServer';
+
+  const layerIds = [2, 3, 4]; // Owned, Easement, Leased
+
+  let loadedAny = false;
+
+  for (const id of layerIds) {
+    try {
+      const url =
+        `${base}/${id}/query` +
+        '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+      const r = await fetch(url, { cache: 'reload' });
+      if (!r.ok) continue;
+
       const j = await r.json();
+      // Add each set of features into the same Wisconsin layer
       wiPublic.addData(j);
+      loadedAny = true;
+    } catch (e) {
+      console.warn('Wisconsin public hunting load failed for layer', id, e);
     }
-  } catch (e) {
-    console.warn('Wisconsin public hunting load failed', e);
+  }
+
+  // Fallback: if for some reason none of the service calls worked,
+  // fall back to your local GeoJSON file (if present).
+  if (!loadedAny) {
+    try {
+      const rLocal = await fetch('wi_public_hunting.geojson', { cache: 'reload' });
+      if (rLocal.ok) {
+        const jLocal = await rLocal.json();
+        wiPublic.addData(jLocal);
+      }
+    } catch (e) {
+      console.warn('Wisconsin local public hunting fallback failed', e);
+    }
   }
 }
+
 
 
 // Kick off loads
