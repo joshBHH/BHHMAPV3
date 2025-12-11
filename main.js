@@ -2792,8 +2792,7 @@ function onStateChanged() {
     }
   }
 
-  syncOverlayChecks();
-}
+  
 
 
 function setState(code, save = true) {
