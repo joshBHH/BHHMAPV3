@@ -676,7 +676,7 @@ async function loadIndianaPublic() {
 loadIndianaPublic();
 
 /*******************
- * OVERLAYS: Public Hunting (other states via local GeoJSON)
+ * OVERLAYS: Public Hunting (other states via remote services / local GeoJSON)
  *******************/
 // These layers all use the same popup builder we used for Indiana:
 //   bindIndianaHuntingPopup(feat, layer)
@@ -746,10 +746,10 @@ async function loadMichiganPublic() {
   }
 }
 
-loadMichiganPublic();
 
-
-// Kentucky
+/*******************
+ * OVERLAYS: Kentucky Public Hunting (remote ArcGIS service)
+ *******************/
 const kentuckyPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -757,17 +757,24 @@ const kentuckyPublic = L.geoJSON(null, {
 
 async function loadKentuckyPublic() {
   try {
-    const r = await fetch('ky_public_hunting.geojson', { cache: 'reload' });
-    if (r.ok) {
-      const j = await r.json();
-      kentuckyPublic.addData(j);
-    }
+    // Ky_Public_Hunting_Areas_WGS84WM – layer 1 = HuntingAreas 
+    const url =
+      'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_Public_Hunting_Areas_WGS84WM/MapServer/1/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    kentuckyPublic.addData(j);
   } catch (e) {
     console.warn('Kentucky public hunting load failed', e);
   }
 }
 
-// West Virginia
+
+/*******************
+ * OVERLAYS: West Virginia Public Hunting (Wildlife Management Areas)
+ *******************/
 const wvPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -775,17 +782,24 @@ const wvPublic = L.geoJSON(null, {
 
 async function loadWvPublic() {
   try {
-    const r = await fetch('wv_public_hunting.geojson', { cache: 'reload' });
-    if (r.ok) {
-      const j = await r.json();
-      wvPublic.addData(j);
-    }
+    // WV Boundaries FeatureServer/6 – Wildlife_Management_Areas 
+    const url =
+      'https://gis.transportation.wv.gov/arcgis/rest/services/Boundaries/FeatureServer/6/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    wvPublic.addData(j);
   } catch (e) {
     console.warn('West Virginia public hunting load failed', e);
   }
 }
 
-// Pennsylvania
+
+/*******************
+ * OVERLAYS: Pennsylvania Public Hunting (State Game Lands)
+ *******************/
 const paPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -793,17 +807,25 @@ const paPublic = L.geoJSON(null, {
 
 async function loadPaPublic() {
   try {
-    const r = await fetch('pa_public_hunting.geojson', { cache: 'reload' });
-    if (r.ok) {
-      const j = await r.json();
-      paPublic.addData(j);
-    }
+    // PA State Game Lands polygons – 440W_Map_WFL1 FeatureServer/1 
+    const url =
+      'https://services9.arcgis.com/6EuFgO4fLTqfNOhu/ArcGIS/rest/services/440W_Map_WFL1/FeatureServer/1/query' +
+      '?where=1%3D1&outFields=*&outSR=4326&f=geojson';
+
+    const r = await fetch(url, { cache: 'reload' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    paPublic.addData(j);
   } catch (e) {
     console.warn('Pennsylvania public hunting load failed', e);
   }
 }
 
-// Illinois
+
+/*******************
+ * OVERLAYS: Illinois Public Hunting
+ * (still using local GeoJSON until we have a good ArcGIS URL)
+ *******************/
 const ilPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -821,7 +843,11 @@ async function loadIlPublic() {
   }
 }
 
-// Wisconsin
+
+/*******************
+ * OVERLAYS: Wisconsin Public Hunting
+ * (still using local GeoJSON until we have a good ArcGIS URL)
+ *******************/
 const wiPublic = L.geoJSON(null, {
   style: { color: '#22c55e', weight: 2, fillOpacity: 0.15 },
   onEachFeature: (feat, layer) => bindIndianaHuntingPopup(feat, layer)
@@ -839,7 +865,8 @@ async function loadWiPublic() {
   }
 }
 
-// Kick off loads (if files are missing, you'll just see console warnings)
+
+// Kick off loads
 loadMichiganPublic();
 loadKentuckyPublic();
 loadWvPublic();
