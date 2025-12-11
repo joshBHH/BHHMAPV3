@@ -2656,17 +2656,17 @@ rebuildCompassTargets();
 // [BHH: STATE – LOGIC START]
 const STORAGE_STATE = 'bhh_state_code';
 
-const stateBadgeText = document.getElementById('stateBadgeText');
-const stateSelect = document.getElementById('stateSelect');
-const stateApplyBtn = document.getElementById('stateApply');
-const menuStateBtn = document.getElementById('menuState');
+const stateBadgeText  = document.getElementById('stateBadgeText');
+const stateSelect     = document.getElementById('stateSelect');
+const stateApplyBtn   = document.getElementById('stateApply');
+const menuStateBtn    = document.getElementById('menuState');
 const stateSheetRadios = Array.from(
   document.querySelectorAll('input[name="bhhState"]')
 );
 
 const STATE_CFG = {
-  OH: { name: 'Ohio', center: [40.4173, -82.9071], zoom: 7 },
-  IN: { name: 'Indiana', center: [39.905, -86.2816], zoom: 7 }
+  OH: { name: 'Ohio',    center: [40.4173, -82.9071], zoom: 7 },
+  IN: { name: 'Indiana', center: [39.905,  -86.2816], zoom: 7 }
 };
 
 let currentState =
@@ -2674,7 +2674,7 @@ let currentState =
 
 function syncStateUI() {
   if (stateBadgeText) stateBadgeText.textContent = currentState;
-  if (stateSelect) stateSelect.value = currentState;
+  if (stateSelect)    stateSelect.value          = currentState;
   stateSheetRadios.forEach(r => {
     r.checked = (r.value.toUpperCase() === currentState);
   });
@@ -2716,14 +2716,14 @@ function onStateChanged() {
       'Waterfowl Zones (coming soon)';
   }
 
-  // Enable all three overlays for OH + IN (and disable if you ever add "other" states)
+  // Enable Public / Counties / Waterfowl for OH & IN
   if (ovlOhio)      ovlOhio.disabled      = !(isOH || isIN);
   if (ovlCounties)  ovlCounties.disabled  = !(isOH || isIN);
   if (ovlWaterfowl) ovlWaterfowl.disabled = !(isOH || isIN);
 
   // Remove all state-specific overlays
-  if (map.hasLayer(ohioPublic))    map.removeLayer(ohioPublic);
-  if (map.hasLayer(indianaPublic)) map.removeLayer(indianaPublic);
+  if (map.hasLayer(ohioPublic))          map.removeLayer(ohioPublic);
+  if (map.hasLayer(indianaPublic))       map.removeLayer(indianaPublic);
 
   if (map.hasLayer(ohioCounties))        map.removeLayer(ohioCounties);
   if (map.hasLayer(countyLabels))        map.removeLayer(countyLabels);
@@ -2751,49 +2751,9 @@ function onStateChanged() {
     }
   }
 
-  // Make sure the overlay checkboxes line up with reality
+  // Make sure our overlay checkboxes match what's actually on the map
   syncOverlayChecks();
 }
-
-
-
-  // Enable Public + Counties for OH/IN, disable elsewhere
-  if (ovlOhio)      ovlOhio.disabled     = !(isOH || isIN);
-  if (ovlCounties)  ovlCounties.disabled = !(isOH || isIN);
-  if (ovlWaterfowl) ovlWaterfowl.disabled = !isOH;
-
-  // Remove all state-specific overlays
-  if (map.hasLayer(ohioPublic))    map.removeLayer(ohioPublic);
-  if (map.hasLayer(indianaPublic)) map.removeLayer(indianaPublic);
-
-  if (map.hasLayer(ohioCounties))        map.removeLayer(ohioCounties);
-  if (map.hasLayer(countyLabels))        map.removeLayer(countyLabels);
-  if (map.hasLayer(indianaCounties))     map.removeLayer(indianaCounties);
-  if (map.hasLayer(indianaCountyLabels)) map.removeLayer(indianaCountyLabels);
-
-  // Re-add for the new state based on current checkboxes
-  if (wantedPublic && ovlOhio && !ovlOhio.disabled) {
-    if (isIN) {
-      indianaPublic.addTo(map);
-    } else if (isOH) {
-      ohioPublic.addTo(map);
-    }
-  }
-
-  if (wantedCounties && ovlCounties && !ovlCounties.disabled) {
-    if (isIN) {
-      indianaCounties.addTo(map);
-      indianaCountyLabels.addTo(map);
-      refreshIndianaCountyLabels();
-    } else if (isOH) {
-      ohioCounties.addTo(map);
-      countyLabels.addTo(map);
-      refreshCountyLabels();
-    }
-  }
-
-syncOverlayChecks();
-
 
 function setState(code, save = true) {
   const c = (code || 'OH').toUpperCase();
@@ -2826,6 +2786,7 @@ if (stateApplyBtn) {
   };
 }
 // [BHH: STATE – LOGIC END]
+
 
 
 /*******************
