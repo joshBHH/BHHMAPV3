@@ -1041,7 +1041,10 @@ async function loadOhioWaterfowlZones() {
 // 1. Open that layer in ArcGIS (from the Experience: ... > More details).
 // 2. Copy the layer’s REST URL.
 // 3. Replace the placeholder string below with that URL.
-const IN_WATERFOWL_SERVICE = 'https://experience.arcgis.com/experience/88e4745e813c4d3b9fb7e50084280f4e';
+// Indiana DNR hosted waterfowl zones service (polygon layer)
+const IN_WATERFOWL_SERVICE =
+  'https://gisdata.in.gov/server/rest/services/Hosted/Hunting_Areas_Waterfowl_Zones/FeatureServer/0';
+
 
 async function loadIndianaWaterfowlZones() {
   if (!IN_WATERFOWL_SERVICE ||
