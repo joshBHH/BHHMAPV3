@@ -30,6 +30,30 @@
 
   <!-- BHH main styles -->
   <link rel="stylesheet" href="style.css?v=3" />
+    <style>
+    /* Small popup for the state badge dropdown */
+    .state-picker-popup {
+      position: fixed;
+      z-index: 1400;
+      background: #0f1b12;
+      border: 1px solid #f97316;
+      border-radius: 10px;
+      padding: 6px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      display: none;
+    }
+
+    .state-picker-popup select {
+      width: 160px;
+      max-height: 220px;
+      background: #0f1b12;
+      color: #e7f1e8;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
+  </style>
+
   <!-- [BHH: HEAD END] -->
 </head>
 <body>
@@ -64,6 +88,20 @@
       State: <strong id="stateBadgeText">--</strong>
     </div>
     <!-- [BHH: UI – STATE BADGE END] -->
+        <!-- State badge dropdown popup -->
+    <div id="statePickerPopup" class="state-picker-popup" aria-hidden="true">
+      <select id="statePickerSelect">
+        <option value="OH">Ohio</option>
+        <option value="MI">Michigan</option>
+        <option value="PA">Pennsylvania</option>
+        <option value="IN">Indiana</option>
+        <option value="KY">Kentucky</option>
+        <option value="WV">West Virginia</option>
+        <option value="IL">Illinois</option>
+        <option value="WI">Wisconsin</option>
+      </select>
+    </div>
+
 
     <!-- Compass overlay (draggable) -->
     <div id="compassWidget">
