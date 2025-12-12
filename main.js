@@ -2959,13 +2959,18 @@ rebuildCompassTargets();
 // [BHH: STATE – LOGIC START]
 const STORAGE_STATE = 'bhh_state_code';
 
-const stateBadgeText  = document.getElementById('stateBadgeText');
-const stateSelect     = document.getElementById('stateSelect');
-const stateApplyBtn   = document.getElementById('stateApply');
-const menuStateBtn    = document.getElementById('menuState');
+const stateBadgeText   = document.getElementById('stateBadgeText');
+const stateSelect      = document.getElementById('stateSelect');
+const stateApplyBtn    = document.getElementById('stateApply');
+const menuStateBtn     = document.getElementById('menuState');
 const stateSheetRadios = Array.from(
   document.querySelectorAll('input[name="bhhState"]')
 );
+
+// NEW: popup dropdown for the draggable state badge
+const statePickerPopup  = document.getElementById('statePickerPopup');
+const statePickerSelect = document.getElementById('statePickerSelect');
+
 
 const STATE_CFG = {
   OH: {
@@ -3040,10 +3045,13 @@ let currentState =
 function syncStateUI() {
   if (stateBadgeText) stateBadgeText.textContent = currentState;
   if (stateSelect)    stateSelect.value          = currentState;
+  if (statePickerSelect) statePickerSelect.value = currentState;
+
   stateSheetRadios.forEach(r => {
     r.checked = (r.value.toUpperCase() === currentState);
   });
 }
+
 
 function onStateChanged() {
   const wantedPublic   = ovlOhio     && ovlOhio.checked;
@@ -3139,13 +3147,83 @@ syncStateUI();
 onStateChanged();
 
 if (menuStateBtn) {
+  // Tools -> Change State still opens the full state sheet
   menuStateBtn.onclick = () => openSheet('state');
 }
 
+// --- NEW: popup dropdown behavior for the draggable state badge ---
 const stateBadge = document.getElementById('stateBadge');
-if (stateBadge) {
-  stateBadge.addEventListener('click', () => openSheet('state'));
+
+function showStatePicker() {
+  if (!stateBadge || !statePickerPopup || !statePickerSelect) return;
+
+  // Position popup directly under the badge
+  const rect = stateBadge.getBoundingClientRect();
+  statePickerPopup.style.left = rect.left + 'px';
+  statePickerPopup.style.top  = (rect.bottom + 4) + 'px';
+
+  // Sync the currently selected state
+  statePickerSelect.value = currentState;
+
+  statePickerPopup.style.display = 'block';
+  statePickerPopup.setAttribute('aria-hidden', 'false');
+
+  // Focus the select (mobile browsers will usually bring up native picker)
+  statePickerSelect.focus();
 }
+
+function hideStatePicker() {
+  if (!statePickerPopup) return;
+  statePickerPopup.style.display = 'none';
+  statePickerPopup.setAttribute('aria-hidden', 'true');
+}
+
+if (stateBadge) {
+  stateBadge.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (!statePickerPopup) return;
+
+    const isVisible = statePickerPopup.style.display === 'block';
+    if (isVisible) {
+      hideStatePicker();
+    } else {
+      showStatePicker();
+    }
+  });
+}
+
+// Change state when user picks from the dropdown
+if (statePickerSelect) {
+  statePickerSelect.addEventListener('change', () => {
+    const val = statePickerSelect.value;
+    if (val) setState(val);
+    hideStatePicker();
+  });
+}
+
+// Hide popup when clicking anywhere else on the document
+document.addEventListener('click', (ev) => {
+  if (!statePickerPopup || statePickerPopup.style.display !== 'block') return;
+
+  if (
+    stateBadge && stateBadge.contains(ev.target)
+  ) {
+    return;
+  }
+  if (statePickerPopup.contains(ev.target)) {
+    return;
+  }
+
+  hideStatePicker();
+});
+
+// Hide popup on Escape key
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    hideStatePicker();
+  }
+});
+
 
 stateSheetRadios.forEach(r => {
   r.addEventListener('change', () => setState(r.value));
