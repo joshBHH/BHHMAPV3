@@ -3063,10 +3063,15 @@ function onStateChanged() {
   const lblPublic    = document.getElementById('lblPublic');
   const lblCounties  = document.getElementById('lblCounties');
   const lblWaterfowl = document.getElementById('lblWaterfowl');
-
+  const resLabel     = document.getElementById('toolResourcesLabel');
+  
   const supportsPublic    = !!cfg.hasPublic;
   const supportsCounties  = !!cfg.hasCounties;
   const supportsWaterfowl = !!cfg.hasWaterfowl;
+
+  if (resLabel) {
+    resLabel.textContent = `${cfg.name} Hunting Resources`;
+  }
 
   // Update labels to show state name or “coming soon”
   if (lblCounties) {
@@ -3393,6 +3398,18 @@ const toolCompassBtn = document.getElementById('toolCompass');
 if (toolCompassBtn) {
   toolCompassBtn.addEventListener('click', () => openSheet('compass'));
 }
+
+// NEW: open Hunting Resources page in a new tab, state-aware
+const toolResourcesBtn = document.getElementById('toolResources');
+if (toolResourcesBtn) {
+  toolResourcesBtn.addEventListener('click', () => {
+    // One central landing page, with current state in the query string
+    const url =
+      `https://www.buckeyehunterhub.com/hunting/resources/by/state`;
+    window.open(url, '_blank');
+  });
+}
+
 
 const toolDeleteToggle = document.getElementById('toolDeleteToggle');
 if (toolDeleteToggle) {
