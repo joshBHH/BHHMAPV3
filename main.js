@@ -3456,90 +3456,65 @@ function tryParseLatLng(q) {
   return [lat, lng];
 }
 
+// ✅ New version – MapTiler address search
 async function runSearch(query) {
-  const q = query.trim();
-  if (!q) return;
-
-  // 1) If it's "lat,lng", just go there directly
-  const coords = tryParseLatLng(q);
-  if (coords) {
-    const [lat, lng] = coords;
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 14));
-
-    if (!searchMarker) {
-      searchMarker = L.marker([lat, lng]).addTo(map);
-    } else {
-      searchMarker.setLatLng([lat, lng]);
-    }
-
-    searchMarker.bindPopup(`<b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b>`).openPopup();
-    return;
-  }
-
-  // 2) Otherwise, use MapTiler geocoding (supports addresses)
-  if (!MAPTILER_KEY) {
-    alert('Search is not configured (missing MapTiler key).');
-    return;
-  }
-
-  if (searchGo) {
-    searchGo.disabled = true;
-    searchGo.textContent = '...';
-  }
+  if (!query || !query.trim()) return;
 
   try {
     const url =
       'https://api.maptiler.com/geocoding/' +
-      encodeURIComponent(q) +
-      '.json?key=' + MAPTILER_KEY +
-      '&limit=5&country=US';
+      encodeURIComponent(query.trim()) +
+      '.json?key=VLOZCnjQYBtgpZ3BXBK3&country=US&limit=5';
 
-    const resp = await fetch(url);
+    const resp = await fetch(url, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
     const data = await resp.json();
-    const feats = data.features || [];
-    if (!feats.length) {
-      alert('No results found for "' + q + '".');
+    if (!data.features || !data.features.length) {
+      alert('No results found for: ' + query);
       return;
     }
 
-    // Use the first result (place, address, etc.)
-    const feat = feats[0];
-    const center = feat.center || (feat.geometry && feat.geometry.coordinates);
-    if (!center || center.length < 2) {
-      alert('Search result is missing coordinates.');
-      return;
-    }
+    // Prefer the most specific result (address > street > place)
+    const ranked = data.features.slice().sort((a, b) => {
+      const ra = (a.place_type && a.place_type[0]) || '';
+      const rb = (b.place_type && b.place_type[0]) || '';
+      const rank = { address: 0, poi: 1, street: 2, locality: 3, place: 4, region: 5, country: 6 };
+      return (rank[ra] ?? 99) - (rank[rb] ?? 99);
+    });
 
-    const lng = center[0];
-    const lat = center[1];
-
-    // Friendly label: full address / place name if available
+    const feat = ranked[0];
+    const [lng, lat] = feat.center;
     const label =
       feat.place_name ||
-      feat.text ||
-      q;
+      (feat.properties && (feat.properties.name || feat.properties.label)) ||
+      query;
 
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 13));
-
-    if (!searchMarker) {
-      searchMarker = L.marker([lat, lng]).addTo(map);
+    // Reuse or create one “search result” marker
+    if (!window.bhhSearchMarker) {
+      window.bhhSearchMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: '',
+          html: '<div class="search-pin"></div>',
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
+        })
+      }).addTo(map);
     } else {
-      searchMarker.setLatLng([lat, lng]);
+      window.bhhSearchMarker.setLatLng([lat, lng]);
     }
 
-    searchMarker.bindPopup(`<b>${label}</b>`).openPopup();
-  } catch (e) {
-    console.warn('Search failed', e);
-    alert('Search failed. Please try again.');
-  } finally {
-    if (searchGo) {
-      searchGo.disabled = false;
-      searchGo.textContent = 'Go';
-    }
+    window.bhhSearchMarker
+      .bindPopup(`<b>${label}</b>`)
+      .openPopup();
+
+    map.setView([lat, lng], 17);
+  } catch (err) {
+    console.error('Search failed', err);
+    alert('Search error, please try again.');
   }
 }
+
 
 if (searchInput && searchGo) {
   searchGo.addEventListener('click', () => {
