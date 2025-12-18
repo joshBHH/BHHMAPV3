@@ -4,6 +4,8 @@
 // [BHH: MAP INIT START]
 const map = L.map('map').setView([40.4173, -82.9071], 7);
 
+const MAPTILER_KEY = 'VLOZCnjQYBtgpZ3BXBK3'; // same key you use for tiles
+
 // MapTiler basemaps (replace key if needed)
 const basic = L.tileLayer(
   'https://api.maptiler.com/maps/basic/{z}/{x}/{y}.png?key=VLOZCnjQYBtgpZ3BXBK3',
@@ -3434,6 +3436,111 @@ ovlTrack.onchange =
   () => ovlTrack.checked
     ? trackLayer.addTo(map)
     : map.removeLayer(trackLayer);
+
+/*******************
+ * PLACE / COORD SEARCH BAR
+ *******************/
+const searchInput = document.getElementById('searchInput');
+const searchGo    = document.getElementById('searchGo');
+let searchMarker  = null;
+
+function tryParseLatLng(q) {
+  if (!q) return null;
+  const m = q.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return [lat, lng];
+}
+
+async function runSearch(query) {
+  const q = query.trim();
+  if (!q) return;
+
+  // 1) If it's "lat,lng", just go there directly
+  const coords = tryParseLatLng(q);
+  if (coords) {
+    const [lat, lng] = coords;
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 14));
+
+    if (!searchMarker) {
+      searchMarker = L.marker([lat, lng]).addTo(map);
+    } else {
+      searchMarker.setLatLng([lat, lng]);
+    }
+    return;
+  }
+
+  // 2) Otherwise, use MapTiler geocoding
+  if (!MAPTILER_KEY) {
+    alert('Search is not configured (missing MapTiler key).');
+    return;
+  }
+
+  if (searchGo) {
+    searchGo.disabled = true;
+    searchGo.textContent = '...';
+  }
+
+  try {
+    const url =
+      'https://api.maptiler.com/geocoding/' +
+      encodeURIComponent(q) +
+      '.json?key=' + MAPTILER_KEY +
+      '&limit=5';
+
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+    const data = await resp.json();
+    const feats = data.features || [];
+    if (!feats.length) {
+      alert('No results found for "' + q + '".');
+      return;
+    }
+
+    const feat = feats[0];
+    const center = feat.center || (feat.geometry && feat.geometry.coordinates);
+    if (!center || center.length < 2) {
+      alert('Search result is missing coordinates.');
+      return;
+    }
+
+    const lng = center[0];
+    const lat = center[1];
+
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 13));
+
+    if (!searchMarker) {
+      searchMarker = L.marker([lat, lng]).addTo(map);
+    } else {
+      searchMarker.setLatLng([lat, lng]);
+    }
+  } catch (e) {
+    console.warn('Search failed', e);
+    alert('Search failed. Please try again.');
+  } finally {
+    if (searchGo) {
+      searchGo.disabled = false;
+      searchGo.textContent = 'Go';
+    }
+  }
+}
+
+if (searchInput && searchGo) {
+  searchGo.addEventListener('click', () => {
+    runSearch(searchInput.value);
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      runSearch(searchInput.value);
+    }
+  });
+}
 
 
 /*******************
