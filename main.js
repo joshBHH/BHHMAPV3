@@ -3306,6 +3306,11 @@ function closeSheets() {
   if (!sheetBg) return;
   sheetBg.classList.remove('show');
   Object.values(sheetMap).forEach(s => s && s.classList.remove('show'));
+}
+
+if (sheetBg) {
+  sheetBg.onclick = closeSheets;
+}
 
   // NEW: show floating controls again
   document.body.classList.remove('sheet-open');
