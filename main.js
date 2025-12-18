@@ -3437,96 +3437,97 @@ ovlTrack.onchange =
     ? trackLayer.addTo(map)
     : map.removeLayer(trackLayer);
 
-/*******************
- * PLACE / COORD SEARCH BAR
- *******************/
+// ============ SIMPLE PLACE / LAT-LNG SEARCH ============
+
+// Expecting an <input id="searchInput"> and <button id="searchButton"> in your HTML
 const searchInput = document.getElementById('searchInput');
-const searchGo    = document.getElementById('searchGo');
-let searchMarker  = null;
+const searchBtn   = document.getElementById('searchButton');
 
-function tryParseLatLng(q) {
-  if (!q) return null;
-  const m = q.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
-  if (!m) return null;
+function parseLatLngString(str) {
+  if (!str) return null;
+  const cleaned = str.trim().replace(/\s+/g, ' ');
 
-  const lat = parseFloat(m[1]);
-  const lng = parseFloat(m[2]);
-  if (isNaN(lat) || isNaN(lng)) return null;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-  return [lat, lng];
+  // Try "lat,lng"
+  let parts = cleaned.split(',');
+  if (parts.length === 2) {
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  // Try "lat lng"
+  parts = cleaned.split(' ');
+  if (parts.length === 2) {
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  return null;
 }
 
-// ✅ New version – MapTiler address search
 async function runSearch(query) {
-  if (!query || !query.trim()) return;
+  query = (query || '').trim();
+  if (!query) return;
 
+  // 1) If it looks like coordinates, just go there
+  const coords = parseLatLngString(query);
+  if (coords) {
+    const { lat, lng } = coords;
+    map.setView([lat, lng], Math.max(map.getZoom(), 15));
+    L.marker([lat, lng])
+      .addTo(map)
+      .bindPopup(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+      .openPopup();
+    return;
+  }
+
+  // 2) Otherwise, do a simple place search (no state bias, no building/POI guarantee)
   try {
     const url =
-      'https://api.maptiler.com/geocoding/' +
-      encodeURIComponent(query.trim()) +
-      '.json?key=VLOZCnjQYBtgpZ3BXBK3&country=US&limit=5';
+      'https://nominatim.openstreetmap.org/search' +
+      '?format=json&limit=1&q=' +
+      encodeURIComponent(query);
 
-    const resp = await fetch(url, { cache: 'no-store' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'en' }
+    });
 
-    const data = await resp.json();
-    if (!data.features || !data.features.length) {
+    if (!res.ok) throw new Error('Geocoding error');
+    const results = await res.json();
+    if (!results.length) {
       alert('No results found for: ' + query);
       return;
     }
 
-    // Prefer the most specific result (address > street > place)
-    const ranked = data.features.slice().sort((a, b) => {
-      const ra = (a.place_type && a.place_type[0]) || '';
-      const rb = (b.place_type && b.place_type[0]) || '';
-      const rank = { address: 0, poi: 1, street: 2, locality: 3, place: 4, region: 5, country: 6 };
-      return (rank[ra] ?? 99) - (rank[rb] ?? 99);
-    });
+    const hit = results[0];
+    const lat = parseFloat(hit.lat);
+    const lon = parseFloat(hit.lon);
 
-    const feat = ranked[0];
-    const [lng, lat] = feat.center;
-    const label =
-      feat.place_name ||
-      (feat.properties && (feat.properties.name || feat.properties.label)) ||
-      query;
-
-    // Reuse or create one “search result” marker
-    if (!window.bhhSearchMarker) {
-      window.bhhSearchMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-          className: '',
-          html: '<div class="search-pin"></div>',
-          iconSize: [30, 30],
-          iconAnchor: [15, 30]
-        })
-      }).addTo(map);
-    } else {
-      window.bhhSearchMarker.setLatLng([lat, lng]);
-    }
-
-    window.bhhSearchMarker
-      .bindPopup(`<b>${label}</b>`)
+    map.setView([lat, lon], 14);
+    L.marker([lat, lon])
+      .addTo(map)
+      .bindPopup(hit.display_name || query)
       .openPopup();
-
-    map.setView([lat, lng], 17);
-  } catch (err) {
-    console.error('Search failed', err);
-    alert('Search error, please try again.');
+  } catch (e) {
+    console.warn('Search failed', e);
+    alert('Search failed. Try a different place name or coordinates.');
   }
 }
 
-
-if (searchInput && searchGo) {
-  searchGo.addEventListener('click', () => {
-    runSearch(searchInput.value);
-  });
+// Wire up the input and button
+if (searchInput && searchBtn) {
+  searchBtn.addEventListener('click', () => runSearch(searchInput.value));
 
   searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      runSearch(searchInput.value);
-    }
+    if (e.key === 'Enter') runSearch(searchInput.value);
   });
 }
+
 
 
 /*******************
