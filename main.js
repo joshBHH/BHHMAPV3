@@ -3471,10 +3471,12 @@ async function runSearch(query) {
     } else {
       searchMarker.setLatLng([lat, lng]);
     }
+
+    searchMarker.bindPopup(`<b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b>`).openPopup();
     return;
   }
 
-  // 2) Otherwise, use MapTiler geocoding
+  // 2) Otherwise, use MapTiler geocoding (supports addresses)
   if (!MAPTILER_KEY) {
     alert('Search is not configured (missing MapTiler key).');
     return;
@@ -3490,7 +3492,7 @@ async function runSearch(query) {
       'https://api.maptiler.com/geocoding/' +
       encodeURIComponent(q) +
       '.json?key=' + MAPTILER_KEY +
-      '&limit=5';
+      '&limit=5&country=US';
 
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -3502,6 +3504,7 @@ async function runSearch(query) {
       return;
     }
 
+    // Use the first result (place, address, etc.)
     const feat = feats[0];
     const center = feat.center || (feat.geometry && feat.geometry.coordinates);
     if (!center || center.length < 2) {
@@ -3512,6 +3515,12 @@ async function runSearch(query) {
     const lng = center[0];
     const lat = center[1];
 
+    // Friendly label: full address / place name if available
+    const label =
+      feat.place_name ||
+      feat.text ||
+      q;
+
     map.flyTo([lat, lng], Math.max(map.getZoom(), 13));
 
     if (!searchMarker) {
@@ -3519,6 +3528,8 @@ async function runSearch(query) {
     } else {
       searchMarker.setLatLng([lat, lng]);
     }
+
+    searchMarker.bindPopup(`<b>${label}</b>`).openPopup();
   } catch (e) {
     console.warn('Search failed', e);
     alert('Search failed. Please try again.');
@@ -3530,17 +3541,6 @@ async function runSearch(query) {
   }
 }
 
-if (searchInput && searchGo) {
-  searchGo.addEventListener('click', () => {
-    runSearch(searchInput.value);
-  });
-
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      runSearch(searchInput.value);
-    }
-  });
-}
 
 
 /*******************
