@@ -3439,9 +3439,9 @@ ovlTrack.onchange =
 
 // ============ SIMPLE PLACE / LAT-LNG SEARCH ============
 
-// Expecting an <input id="searchInput"> and <button id="searchButton"> in your HTML
+// Expecting an <input id="searchInput"> and <button id="searchGo"> in your HTML
 const searchInput = document.getElementById('searchInput');
-const searchBtn   = document.getElementById('searchButton');
+const searchBtn   = document.getElementById('searchGo');
 
 function parseLatLngString(str) {
   if (!str) return null;
