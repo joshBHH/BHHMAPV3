@@ -3274,33 +3274,33 @@ function openSheet(which) {
   sheetBg.classList.add('show');
   sheetMap[which].classList.add('show');
 
-  // NEW: hide floating controls while a sheet is open
-  document.body.classList.add('sheet-open');
-
-  if (statePickerPopup) {
-    statePickerPopup.style.display = 'none';
-    statePickerPopup.setAttribute('aria-hidden', 'true');
-  }
-
   if (which === 'waypoints') refreshWaypointsUI();
+
   if (which === 'basemap') {
     syncOverlayChecks();
     syncBaseRadio();
     if (stateSelect) stateSelect.value = currentState;
   }
-  if (which === 'moon')   renderMoon();
-  if (which === 'score')  computeHuntScore();
+
+  if (which === 'moon') {
+    renderMoon();
+  }
+
+  if (which === 'score') {
+    computeHuntScore();
+  }
+
   if (which === 'compass') {
     rebuildCompassTargets();
     updateCompassReadout();
     startCompass();
   }
+
   if (which === 'almanac') {
     const cb = document.getElementById('almanacFieldInfo');
     if (cb) cb.checked = (localStorage.getItem('ui_info_visible') === '1');
   }
 }
-
 
 function closeSheets() {
   if (!sheetBg) return;
@@ -3311,11 +3311,6 @@ function closeSheets() {
 if (sheetBg) {
   sheetBg.onclick = closeSheets;
 }
-
-  // NEW: show floating controls again
-  document.body.classList.remove('sheet-open');
-}
-
 
 // Wire the floating “BHH Map Layers” button
 (function () {
@@ -3416,25 +3411,6 @@ if (toolResourcesBtn) {
     window.open(url, '_blank');
   });
 }
-
-const sheetBg = document.getElementById('sheetBackdrop');
-const sheetMap = {
-  basemap: document.getElementById('basemapSheet'),
-  tools: document.getElementById('toolsSheet'),
-  waypoints: document.getElementById('waypointsSheet'),
-  track: document.getElementById('trackSheet'),
-  wind: document.getElementById('windSheet'),
-  almanac: document.getElementById('almanacSheet'),
-  moon: document.getElementById('moonSheet'),
-  score: document.getElementById('scoreSheet'),
-  compass: document.getElementById('compassSheet'),
-  wpDetail: document.getElementById('wpDetailSheet'),
-  state: document.getElementById('stateSheet')
-};
-
-const bhhLayersBtn = document.getElementById('bhhLayersBtn');
-// stateBadge and statePickerPopup are already defined above in your state logic
-
 
 
 const toolDeleteToggle = document.getElementById('toolDeleteToggle');
