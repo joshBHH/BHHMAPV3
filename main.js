@@ -3541,6 +3541,17 @@ async function runSearch(query) {
   }
 }
 
+if (searchInput && searchGo) {
+  searchGo.addEventListener('click', () => {
+    runSearch(searchInput.value);
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      runSearch(searchInput.value);
+    }
+  });
+}
 
 
 /*******************
