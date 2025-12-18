@@ -3407,7 +3407,7 @@ if (toolResourcesBtn) {
   toolResourcesBtn.addEventListener('click', () => {
     // One central landing page, with current state in the query string
     const url =
-      `https://www.buckeyehunterhub.com/hunting/resources/by/state`;
+      `https://https://www.buckeyehunterhub.com/hunting-resources-by-state`;
     window.open(url, '_blank');
   });
 }
