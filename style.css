@@ -390,62 +390,57 @@ body,
   cursor: grabbing;
 }
 
-/* Top-center search bar */
+/* Search bar – desktop & general */
 #searchBar {
   position: fixed;
-  top: 12px;
+  z-index: 1400;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1300;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 6px 8px;
+  background: rgba(15, 27, 18, 0.96);
   border-radius: 999px;
-  background: rgba(10, 23, 15, 0.95);
-  border: 1px solid #4b5563;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  max-width: 420px;
+  width: calc(100% - 120px); /* leaves room at the edges on larger screens */
 }
 
 #searchBar input {
+  flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
+  padding: 4px 6px;
+  font-size: 13px;
   background: transparent;
   color: #e5e7eb;
-  min-width: 160px;
-  font-size: 14px;
-}
-
-#searchBar input::placeholder {
-  color: #9ca3af;
 }
 
 #searchBar button {
   border: none;
-  outline: none;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 4px 10px;
   border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
   background: #f97316;
-  color: #0b1120;
-  font-weight: 600;
+  color: #0b1a0f;
+  cursor: pointer;
 }
 
-#searchBar button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* Mobile: let input take more width */
+/* Phone-sized screens: narrower bar, centered so it clears zoom controls */
 @media (max-width: 640px) {
   #searchBar {
-    width: 92%;
+    width: calc(100% - 140px); /* leaves ~70px margin on each side */
+    max-width: 320px;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
   }
-  #searchBar input {
-    flex: 1;
-    min-width: 0;
-  }
+}
+
 
 
 /* Compass widget – show by default */
